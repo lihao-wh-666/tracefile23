@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { login as loginApi } from '../api/auth'
+import { getPublicKey, login as loginApi } from '../api/auth'
 import { getUserInfo as getUserInfoApi } from '../api/user'
+import { encryptPassword } from '../utils/rsa'
 import router from '../router'
 
 export const useUserStore = defineStore('user', {
@@ -11,7 +12,14 @@ export const useUserStore = defineStore('user', {
 
   actions: {
     async login(loginForm) {
-      const res = await loginApi(loginForm)
+      const keyRes = await getPublicKey()
+      const publicKey = keyRes.data.publicKey
+      const encryptedPassword = encryptPassword(publicKey, loginForm.password)
+      const loginData = {
+        username: loginForm.username,
+        password: encryptedPassword
+      }
+      const res = await loginApi(loginData)
       this.token = res.data.token
       localStorage.setItem('token', res.data.token)
       return res

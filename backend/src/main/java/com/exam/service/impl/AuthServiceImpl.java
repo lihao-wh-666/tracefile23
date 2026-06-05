@@ -1,5 +1,6 @@
 package com.exam.service.impl;
 
+import cn.hutool.crypto.asymmetric.RSA;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exam.dto.LoginDTO;
 import com.exam.entity.User;
@@ -20,6 +21,9 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private RSA rsa;
+
     @Override
     public LoginVO login(LoginDTO dto) {
         User user = userMapper.selectOne(
@@ -27,8 +31,14 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new RuntimeException("用户名或密码错误");
         }
+        String decryptedPassword;
+        try {
+            decryptedPassword = rsa.decryptStr(dto.getPassword());
+        } catch (Exception e) {
+            throw new RuntimeException("密码解密失败");
+        }
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        if (!encoder.matches(dto.getPassword(), user.getPassword())) {
+        if (!encoder.matches(decryptedPassword, user.getPassword())) {
             throw new RuntimeException("用户名或密码错误");
         }
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());

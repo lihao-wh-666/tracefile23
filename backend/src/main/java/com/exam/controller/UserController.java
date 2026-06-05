@@ -1,12 +1,13 @@
 package com.exam.controller;
 
+import cn.hutool.crypto.asymmetric.RSA;
 import com.exam.common.Result;
 import com.exam.dto.UserDTO;
 import com.exam.entity.User;
 import com.exam.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -19,7 +20,10 @@ public class UserController {
     private UserMapper userMapper;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RSA rsa;
 
     @GetMapping("/info")
     public Result<User> info() {
@@ -33,7 +37,8 @@ public class UserController {
     public Result<Boolean> create(@RequestBody @Valid UserDTO dto) {
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        String decryptedPassword = rsa.decryptStr(dto.getPassword());
+        user.setPassword(passwordEncoder.encode(decryptedPassword));
         user.setRealName(dto.getRealName());
         user.setRole(dto.getRole());
         user.setEmail(dto.getEmail());
@@ -47,7 +52,8 @@ public class UserController {
         user.setId(id);
         user.setUsername(dto.getUsername());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            String decryptedPassword = rsa.decryptStr(dto.getPassword());
+            user.setPassword(passwordEncoder.encode(decryptedPassword));
         }
         user.setRealName(dto.getRealName());
         user.setRole(dto.getRole());
