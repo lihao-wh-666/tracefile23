@@ -9,7 +9,9 @@ import com.exam.entity.*;
 import com.exam.mapper.*;
 import com.exam.service.ExamRecordService;
 import com.exam.vo.ExamRecordVO;
+import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
+import com.exam.vo.WrongQuestionVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -230,6 +232,202 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         }
 
         return Collections.singletonList(stat);
+    }
+
+    @Override
+    public PersonalScoreStatVO getPersonalStat(Long userId) {
+        List<ExamRecord> records = examRecordMapper.selectList(
+                new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getUserId, userId)
+                        .in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED)
+                        .orderByDesc(ExamRecord::getSubmitTime));
+
+        PersonalScoreStatVO stat = new PersonalScoreStatVO();
+        stat.setTotalExamCount(records.size());
+        stat.setSubmittedCount(records.size());
+
+        if (records.isEmpty()) {
+            stat.setMaxScore(0);
+            stat.setAvgScore(0.0);
+            stat.setAccuracyRate(0.0);
+            stat.setTotalQuestionCount(0);
+            stat.setCorrectQuestionCount(0);
+            stat.setWrongQuestionCount(0);
+            stat.setTotalScore(0);
+            stat.setTotalFullScore(0);
+            return stat;
+        }
+
+        int maxScore = records.stream().mapToInt(ExamRecord::getScore).max().orElse(0);
+        double avgScore = records.stream().mapToInt(ExamRecord::getScore).average().orElse(0.0);
+        stat.setMaxScore(maxScore);
+        stat.setAvgScore(Math.round(avgScore * 100.0) / 100.0);
+
+        ExamRecord maxRecord = records.stream()
+                .filter(r -> r.getScore() != null && r.getScore() == maxScore)
+                .findFirst().orElse(null);
+        if (maxRecord != null) {
+            stat.setMaxScoreExamId(maxRecord.getExamId());
+            Exam exam = examMapper.selectById(maxRecord.getExamId());
+            if (exam != null) {
+                stat.setMaxScoreExamName(exam.getName());
+            }
+        }
+
+        int totalScore = records.stream().mapToInt(ExamRecord::getScore).sum();
+        stat.setTotalScore(totalScore);
+
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+        List<ExamAnswer> answers = examAnswerMapper.selectList(
+                new LambdaQueryWrapper<ExamAnswer>().in(ExamAnswer::getRecordId, recordIds));
+
+        int totalQuestionCount = answers.size();
+        int correctQuestionCount = (int) answers.stream().filter(a -> a.getIsCorrect() != null && a.getIsCorrect() == 1).count();
+        int wrongQuestionCount = (int) answers.stream().filter(a -> a.getIsCorrect() != null && a.getIsCorrect() == 0).count();
+
+        stat.setTotalQuestionCount(totalQuestionCount);
+        stat.setCorrectQuestionCount(correctQuestionCount);
+        stat.setWrongQuestionCount(wrongQuestionCount);
+
+        if (totalQuestionCount > 0) {
+            double accuracyRate = (double) correctQuestionCount / totalQuestionCount * 100;
+            stat.setAccuracyRate(Math.round(accuracyRate * 100.0) / 100.0);
+        } else {
+            stat.setAccuracyRate(0.0);
+        }
+
+        List<Long> paperIds = records.stream().map(ExamRecord::getPaperId).distinct().collect(Collectors.toList());
+        int totalFullScore = 0;
+        if (!paperIds.isEmpty()) {
+            List<Paper> papers = paperMapper.selectBatchIds(paperIds);
+            Map<Long, Paper> paperMap = papers.stream().collect(Collectors.toMap(Paper::getId, p -> p));
+            for (ExamRecord record : records) {
+                Paper paper = paperMap.get(record.getPaperId());
+                if (paper != null) {
+                    totalFullScore += paper.getTotalScore();
+                }
+            }
+        }
+        stat.setTotalFullScore(totalFullScore);
+
+        return stat;
+    }
+
+    @Override
+    public IPage<ExamRecordVO> getMyRecords(Integer current, Integer size, Long userId) {
+        Page<ExamRecord> page = new Page<>(current, size);
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExamRecord::getUserId, userId);
+        wrapper.orderByDesc(ExamRecord::getSubmitTime);
+        IPage<ExamRecord> recordPage = examRecordMapper.selectPage(page, wrapper);
+
+        IPage<ExamRecordVO> voPage = recordPage.convert(r -> buildRecordVO(r));
+        fillBatchInfo(voPage.getRecords());
+        fillRankingInfo(voPage.getRecords());
+
+        return voPage;
+    }
+
+    @Override
+    public IPage<WrongQuestionVO> getWrongQuestions(Integer current, Integer size, Long userId) {
+        List<ExamRecord> records = examRecordMapper.selectList(
+                new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getUserId, userId)
+                        .in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED));
+
+        if (records.isEmpty()) {
+            return new Page<>(current, size, 0);
+        }
+
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+        Map<Long, ExamRecord> recordMap = records.stream().collect(Collectors.toMap(ExamRecord::getId, r -> r));
+
+        List<ExamAnswer> wrongAnswers = examAnswerMapper.selectList(
+                new LambdaQueryWrapper<ExamAnswer>()
+                        .in(ExamAnswer::getRecordId, recordIds)
+                        .eq(ExamAnswer::getIsCorrect, 0));
+
+        int total = wrongAnswers.size();
+        int start = (current - 1) * size;
+        int end = Math.min(start + size, total);
+        List<ExamAnswer> pageAnswers = start >= total ? Collections.emptyList() : wrongAnswers.subList(start, end);
+
+        List<Long> questionIds = pageAnswers.stream().map(ExamAnswer::getQuestionId).collect(Collectors.toList());
+        Map<Long, Question> questionMap = new HashMap<>();
+        if (!questionIds.isEmpty()) {
+            questionMapper.selectBatchIds(questionIds).forEach(q -> questionMap.put(q.getId(), q));
+        }
+
+        List<Long> examIds = records.stream().map(ExamRecord::getExamId).distinct().collect(Collectors.toList());
+        Map<Long, Exam> examMap = new HashMap<>();
+        if (!examIds.isEmpty()) {
+            examMapper.selectBatchIds(examIds).forEach(e -> examMap.put(e.getId(), e));
+        }
+
+        List<WrongQuestionVO> voList = new ArrayList<>();
+        for (ExamAnswer answer : pageAnswers) {
+            Question question = questionMap.get(answer.getQuestionId());
+            ExamRecord record = recordMap.get(answer.getRecordId());
+            if (question == null || record == null) {
+                continue;
+            }
+
+            WrongQuestionVO vo = new WrongQuestionVO();
+            vo.setQuestionId(question.getId());
+            vo.setExamId(record.getExamId());
+            Exam exam = examMap.get(record.getExamId());
+            if (exam != null) {
+                vo.setExamName(exam.getName());
+            }
+            vo.setRecordId(record.getId());
+            vo.setType(question.getType());
+            vo.setContent(question.getContent());
+            vo.setOptionA(question.getOptionA());
+            vo.setOptionB(question.getOptionB());
+            vo.setOptionC(question.getOptionC());
+            vo.setOptionD(question.getOptionD());
+            vo.setUserAnswer(answer.getAnswer());
+            vo.setCorrectAnswer(question.getAnswer());
+            vo.setScore(answer.getScore());
+            vo.setTotalScore(question.getScore());
+            vo.setAnalysis(question.getAnalysis());
+            vo.setSubmitTime(record.getSubmitTime());
+            voList.add(vo);
+        }
+
+        Page<WrongQuestionVO> resultPage = new Page<>(current, size, total);
+        resultPage.setRecords(voList);
+        return resultPage;
+    }
+
+    private void fillRankingInfo(List<ExamRecordVO> records) {
+        if (records.isEmpty()) {
+            return;
+        }
+        for (ExamRecordVO vo : records) {
+            if (vo.getExamId() == null) {
+                continue;
+            }
+            List<ExamRecord> allRecords = examRecordMapper.selectList(
+                    new LambdaQueryWrapper<ExamRecord>()
+                            .eq(ExamRecord::getExamId, vo.getExamId())
+                            .in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED)
+                            .orderByDesc(ExamRecord::getScore));
+
+            int rank = 0;
+            int prevScore = -1;
+            for (int i = 0; i < allRecords.size(); i++) {
+                ExamRecord r = allRecords.get(i);
+                if (r.getScore() == null || !r.getScore().equals(prevScore)) {
+                    rank = i + 1;
+                    prevScore = r.getScore();
+                }
+                if (r.getUserId().equals(vo.getUserId())) {
+                    vo.setRank(rank);
+                    break;
+                }
+            }
+        }
     }
 
     private int autoGrade(Question question, String userAnswer) {

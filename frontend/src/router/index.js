@@ -47,6 +47,12 @@ const routes = [
         name: 'ScoreList',
         component: () => import('../views/score/ScoreList.vue'),
         meta: { title: '成绩统计' }
+      },
+      {
+        path: 'personal-score',
+        name: 'PersonalScore',
+        component: () => import('../views/score/PersonalScore.vue'),
+        meta: { title: '个人成绩台账' }
       }
     ]
   }

@@ -52,6 +52,10 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>成绩统计</span>
         </el-menu-item>
+        <el-menu-item index="/personal-score">
+          <el-icon><User /></el-icon>
+          <span>个人成绩台账</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -80,7 +84,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, ArrowDown, Menu, Close, UserFilled } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const userStore = useUserStore()

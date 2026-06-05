@@ -32,4 +32,6 @@ public class ExamRecordVO {
     private Integer status;
 
     private Integer duration;
+
+    private Integer rank;
 }

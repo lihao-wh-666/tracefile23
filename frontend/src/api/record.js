@@ -23,3 +23,15 @@ export function getScoreStats(examId) {
 export function getRecordAnswers(recordId) {
   return request.get(`/record/${recordId}/answers`)
 }
+
+export function getMyStat() {
+  return request.get('/record/my/stat')
+}
+
+export function getMyRecordList(params) {
+  return request.get('/record/my/list', { params })
+}
+
+export function getMyWrongQuestions(params) {
+  return request.get('/record/my/wrong-questions', { params })
+}

@@ -3,7 +3,9 @@ package com.exam.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.exam.dto.SubmitExamDTO;
 import com.exam.vo.ExamRecordVO;
+import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
+import com.exam.vo.WrongQuestionVO;
 
 import java.util.List;
 
@@ -18,4 +20,10 @@ public interface ExamRecordService {
     ExamRecordVO submitExam(SubmitExamDTO dto, Long userId);
 
     List<ScoreStatVO> scoreStats(Long examId);
+
+    PersonalScoreStatVO getPersonalStat(Long userId);
+
+    IPage<ExamRecordVO> getMyRecords(Integer current, Integer size, Long userId);
+
+    IPage<WrongQuestionVO> getWrongQuestions(Integer current, Integer size, Long userId);
 }
