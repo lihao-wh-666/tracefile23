@@ -1,0 +1,130 @@
+CREATE DATABASE IF NOT EXISTS exam_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+USE exam_db;
+
+CREATE TABLE `subject` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `name`        VARCHAR(100) NOT NULL,
+    `description` VARCHAR(500) DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='科目表';
+
+CREATE TABLE `user` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `username`    VARCHAR(50)  NOT NULL,
+    `password`    VARCHAR(200) NOT NULL,
+    `real_name`   VARCHAR(50)  DEFAULT NULL,
+    `role`        TINYINT      NOT NULL COMMENT '1管理员 2教师 3学生',
+    `avatar`      VARCHAR(500) DEFAULT NULL,
+    `email`       VARCHAR(100) DEFAULT NULL,
+    `phone`       VARCHAR(20)  DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户表';
+
+CREATE TABLE `question` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `subject_id`  BIGINT       NOT NULL,
+    `type`        TINYINT      NOT NULL COMMENT '1单选 2多选 3判断 4填空 5问答',
+    `content`     TEXT         NOT NULL,
+    `option_a`    VARCHAR(500) DEFAULT NULL,
+    `option_b`    VARCHAR(500) DEFAULT NULL,
+    `option_c`    VARCHAR(500) DEFAULT NULL,
+    `option_d`    VARCHAR(500) DEFAULT NULL,
+    `answer`      VARCHAR(500) NOT NULL,
+    `analysis`    TEXT         DEFAULT NULL,
+    `score`       INT          NOT NULL DEFAULT 0,
+    `difficulty`  TINYINT      NOT NULL DEFAULT 1 COMMENT '1简单 2中等 3困难',
+    `create_by`   BIGINT       DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    INDEX `idx_subject_id` (`subject_id`),
+    INDEX `idx_create_by` (`create_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='题目表';
+
+CREATE TABLE `paper` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `name`        VARCHAR(200) NOT NULL,
+    `subject_id`  BIGINT       NOT NULL,
+    `total_score` INT          NOT NULL DEFAULT 0,
+    `pass_score`  INT          NOT NULL DEFAULT 0,
+    `duration`    INT          NOT NULL DEFAULT 0 COMMENT '分钟',
+    `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '0草稿 1已发布',
+    `create_by`   BIGINT       DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    INDEX `idx_subject_id` (`subject_id`),
+    INDEX `idx_create_by` (`create_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='试卷表';
+
+CREATE TABLE `paper_question` (
+    `id`          BIGINT NOT NULL AUTO_INCREMENT,
+    `paper_id`    BIGINT NOT NULL,
+    `question_id` BIGINT NOT NULL,
+    `sort`        INT    NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    INDEX `idx_paper_id` (`paper_id`),
+    INDEX `idx_question_id` (`question_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='试卷题目关联表';
+
+CREATE TABLE `exam` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `paper_id`    BIGINT       NOT NULL,
+    `name`        VARCHAR(200) NOT NULL,
+    `start_time`  DATETIME     NOT NULL,
+    `end_time`    DATETIME     NOT NULL,
+    `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '0未开始 1进行中 2已结束',
+    `create_by`   BIGINT       DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    INDEX `idx_paper_id` (`paper_id`),
+    INDEX `idx_create_by` (`create_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='考试表';
+
+CREATE TABLE `exam_record` (
+    `id`           BIGINT   NOT NULL AUTO_INCREMENT,
+    `exam_id`      BIGINT   NOT NULL,
+    `user_id`      BIGINT   NOT NULL,
+    `paper_id`     BIGINT   NOT NULL,
+    `start_time`   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `submit_time`  DATETIME DEFAULT NULL,
+    `score`        INT      NOT NULL DEFAULT 0,
+    `status`       TINYINT  NOT NULL DEFAULT 0 COMMENT '0考试中 1已提交 2已批改',
+    `duration`     INT      NOT NULL DEFAULT 0 COMMENT '秒',
+    PRIMARY KEY (`id`),
+    INDEX `idx_exam_id` (`exam_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_paper_id` (`paper_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='考试记录表';
+
+CREATE TABLE `exam_answer` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `record_id`   BIGINT       NOT NULL,
+    `question_id` BIGINT       NOT NULL,
+    `answer`      VARCHAR(500) DEFAULT NULL,
+    `is_correct`  TINYINT      NOT NULL DEFAULT 0 COMMENT '0错 1对 2半对',
+    `score`       INT          NOT NULL DEFAULT 0,
+    `auto_score`  INT          DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `idx_record_id` (`record_id`),
+    INDEX `idx_question_id` (`question_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='考试答案表';
+
+INSERT INTO `user` (`username`, `password`, `real_name`, `role`) VALUES
+('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 1);
+
+INSERT INTO `subject` (`name`, `description`) VALUES
+('高等数学', '大学高等数学课程，涵盖微积分、线性代数等内容'),
+('大学英语', '大学英语四级考试相关课程');
