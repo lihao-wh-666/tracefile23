@@ -33,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
         }
         String decryptedPassword;
         try {
-            decryptedPassword = rsa.decryptStr(dto.getPassword());
+            decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
         } catch (Exception e) {
             throw new RuntimeException("密码解密失败");
         }

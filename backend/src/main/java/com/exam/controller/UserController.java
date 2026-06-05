@@ -37,7 +37,7 @@ public class UserController {
     public Result<Boolean> create(@RequestBody @Valid UserDTO dto) {
         User user = new User();
         user.setUsername(dto.getUsername());
-        String decryptedPassword = rsa.decryptStr(dto.getPassword());
+        String decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
         user.setPassword(passwordEncoder.encode(decryptedPassword));
         user.setRealName(dto.getRealName());
         user.setRole(dto.getRole());
@@ -52,7 +52,7 @@ public class UserController {
         user.setId(id);
         user.setUsername(dto.getUsername());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            String decryptedPassword = rsa.decryptStr(dto.getPassword());
+            String decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
             user.setPassword(passwordEncoder.encode(decryptedPassword));
         }
         user.setRealName(dto.getRealName());
