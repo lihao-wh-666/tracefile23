@@ -8,6 +8,16 @@ const routes = [
     component: () => import('../views/login/Login.vue')
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/login/Register.vue')
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/login/ForgotPassword.vue')
+  },
+  {
     path: '/',
     component: Layout,
     redirect: '/dashboard',

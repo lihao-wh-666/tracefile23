@@ -47,8 +47,11 @@
           </el-button>
         </el-form-item>
       </el-form>
+      <div class="login-links">
+        <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+      </div>
       <div class="login-footer">
-        <p>无需下载APP · 浏览器直接访问</p>
+        <p>还没有账户？<router-link to="/register" class="register-link">立即注册</router-link></p>
       </div>
     </el-card>
   </div>
@@ -234,14 +237,39 @@ const handleLogin = async () => {
   transform: translateY(0);
 }
 
+.login-links {
+  text-align: right;
+  margin-bottom: 16px;
+}
+
+.forgot-link {
+  font-size: 14px;
+  color: #909399;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  color: #409eff;
+  text-decoration: underline;
+}
+
 .login-footer {
   text-align: center;
 }
 
 .login-footer p {
-  font-size: 12px;
+  font-size: 14px;
   color: #909399;
   margin: 0;
+}
+
+.register-link {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.register-link:hover {
+  text-decoration: underline;
 }
 
 @media screen and (max-width: 768px) {

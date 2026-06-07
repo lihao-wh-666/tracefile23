@@ -5,6 +5,7 @@
 ## 技术栈
 
 ### 后端
+
 - Spring Boot 2.7.x
 - MyBatis Plus
 - MySQL 8.0
@@ -12,6 +13,7 @@
 - Knife4j (API文档)
 
 ### 前端
+
 - Vue 3
 - Vite
 - Element Plus
@@ -22,17 +24,18 @@
 
 ## 端口说明
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| 前端 | 6000 | Nginx 反向代理 |
-| 后端 | 6080 | Spring Boot API |
-| MySQL | 3306 | 数据库服务 |
+| 服务    | 端口   | 说明              |
+| ----- | ---- | --------------- |
+| 前端    | 6000 | Nginx 反向代理      |
+| 后端    | 6080 | Spring Boot API |
+| MySQL | 3306 | 数据库服务           |
 
 ## 快速开始
 
 ### 方式一：Docker 部署（推荐）
 
 #### 前置要求
+
 - Docker 20.10+
 - Docker Compose 2.0+
 
@@ -83,9 +86,9 @@ npm run dev
 
 ## 访问地址
 
-- **前端页面**: http://localhost:6000
-- **后端API**: http://localhost:6080/api
-- **API文档**: http://localhost:6080/api/doc.html
+- **前端页面**: [http://localhost:6070](http://localhost:6000)
+- **后端API**: <http://localhost:6080/api>
+- **API文档**: <http://localhost:6080/api/doc.html>
 
 ## 数据库配置
 
@@ -134,11 +137,11 @@ exam-system/
 
 ### 服务列表
 
-| 容器名 | 镜像 | 说明 |
-|--------|------|------|
-| exam-mysql | mysql:8.0 | MySQL数据库 |
-| exam-backend | 自定义构建 | Spring Boot后端 |
-| exam-frontend | 自定义构建 | Vue前端 + Nginx |
+| 容器名           | 镜像        | 说明            |
+| ------------- | --------- | ------------- |
+| exam-mysql    | mysql:8.0 | MySQL数据库      |
+| exam-backend  | 自定义构建     | Spring Boot后端 |
+| exam-frontend | 自定义构建     | Vue前端 + Nginx |
 
 ### 数据持久化
 

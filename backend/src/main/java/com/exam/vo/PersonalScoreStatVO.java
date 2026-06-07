@@ -11,7 +11,7 @@ public class PersonalScoreStatVO {
 
     private Integer maxScore;
 
-    private Integer maxScoreExamId;
+    private Long maxScoreExamId;
 
     private String maxScoreExamName;
 
