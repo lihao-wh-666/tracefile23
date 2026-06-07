@@ -21,6 +21,7 @@ CREATE TABLE `user` (
     `avatar`      VARCHAR(500) DEFAULT NULL,
     `email`       VARCHAR(100) DEFAULT NULL,
     `phone`       VARCHAR(20)  DEFAULT NULL,
+    `status`      TINYINT      NOT NULL DEFAULT 1 COMMENT '0禁用 1启用',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     TINYINT      NOT NULL DEFAULT 0,
@@ -122,8 +123,25 @@ CREATE TABLE `exam_answer` (
     INDEX `idx_question_id` (`question_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='考试答案表';
 
-INSERT INTO `user` (`username`, `password`, `real_name`, `role`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 1);
+CREATE TABLE `operation_log` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `user_id`     BIGINT       DEFAULT NULL,
+    `username`    VARCHAR(50)  DEFAULT NULL,
+    `module`      VARCHAR(100) DEFAULT NULL,
+    `operation`   VARCHAR(200) DEFAULT NULL,
+    `method`      VARCHAR(200) DEFAULT NULL,
+    `params`      TEXT         DEFAULT NULL,
+    `ip`          VARCHAR(50)  DEFAULT NULL,
+    `status`      TINYINT      NOT NULL DEFAULT 1,
+    `error_msg`   VARCHAR(500) DEFAULT NULL,
+    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='操作日志表';
+
+INSERT INTO `user` (`username`, `password`, `real_name`, `role`, `status`) VALUES
+('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 1, 1);
 
 INSERT INTO `subject` (`name`, `description`) VALUES
 ('高等数学', '大学高等数学课程，涵盖微积分、线性代数等内容'),

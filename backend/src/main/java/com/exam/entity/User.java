@@ -25,6 +25,8 @@ public class User {
 
     private String phone;
 
+    private Integer status;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

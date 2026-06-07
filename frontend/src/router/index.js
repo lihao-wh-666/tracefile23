@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../components/Layout.vue'
+import { useUserStore } from '../store/user'
+import { ElMessage } from 'element-plus'
 
 const routes = [
   {
@@ -63,6 +65,12 @@ const routes = [
         name: 'PersonalScore',
         component: () => import('../views/score/PersonalScore.vue'),
         meta: { title: '个人成绩台账' }
+      },
+      {
+        path: 'user',
+        name: 'UserList',
+        component: () => import('../views/user/UserList.vue'),
+        meta: { title: '用户管理', roles: [1] }
       }
     ]
   }
@@ -73,13 +81,37 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
-  if (to.path !== '/login' && !token) {
+  const publicPaths = ['/login', '/register', '/forgot-password']
+  
+  if (!publicPaths.includes(to.path) && !token) {
     next('/login')
-  } else {
-    next()
+    return
   }
+
+  if (token && !publicPaths.includes(to.path)) {
+    const userStore = useUserStore()
+    if (!userStore.userInfo) {
+      try {
+        await userStore.getUserInfo()
+      } catch (err) {
+        userStore.logout()
+        next('/login')
+        return
+      }
+    }
+    
+    if (to.meta?.roles && to.meta.roles.length > 0) {
+      if (!to.meta.roles.includes(userStore.userInfo?.role)) {
+        ElMessage.error('无权限访问')
+        next('/dashboard')
+        return
+      }
+    }
+  }
+  
+  next()
 })
 
 export default router

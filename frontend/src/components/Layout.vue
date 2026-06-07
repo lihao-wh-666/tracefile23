@@ -56,6 +56,10 @@
           <el-icon><User /></el-icon>
           <span>个人成绩台账</span>
         </el-menu-item>
+        <el-menu-item index="/user" v-if="userStore.userInfo?.role === 1">
+          <el-icon><UserFilled /></el-icon>
+          <span>用户管理</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

@@ -11,7 +11,6 @@ public class UserDTO {
     @NotBlank
     private String username;
 
-    @NotBlank
     private String password;
 
     private String realName;

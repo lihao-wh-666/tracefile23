@@ -56,6 +56,9 @@ public class AuthServiceImpl implements AuthService {
         if (!encoder.matches(decryptedPassword, user.getPassword())) {
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            throw new BusinessException(ErrorCode.USER_DISABLED);
+        }
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
         LoginVO vo = new LoginVO();
         vo.setToken(token);
@@ -69,10 +72,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void register(RegisterDTO dto) {
-        if (!dto.getPassword().equals(dto.getConfirmPassword())) {
-            throw new BusinessException("两次输入的密码不一致");
-        }
-
         User existUser = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getUsername, dto.getUsername()));
         if (existUser != null) {
@@ -90,6 +89,21 @@ public class AuthServiceImpl implements AuthService {
             decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
         } catch (Exception e) {
             throw new BusinessException("密码解密失败");
+        }
+
+        String decryptedConfirmPassword;
+        try {
+            decryptedConfirmPassword = rsa.decryptStr(dto.getConfirmPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
+        } catch (Exception e) {
+            throw new BusinessException("确认密码解密失败");
+        }
+
+        if (!decryptedPassword.equals(decryptedConfirmPassword)) {
+            throw new BusinessException("两次输入的密码不一致");
+        }
+
+        if (decryptedPassword.length() < 6 || decryptedPassword.length() > 20) {
+            throw new BusinessException("密码长度必须在6-20之间");
         }
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -122,10 +136,6 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void resetPassword(ResetPasswordDTO dto) {
-        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            throw new BusinessException("两次输入的密码不一致");
-        }
-
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, dto.getEmail()));
         if (user == null) {
@@ -149,6 +159,21 @@ public class AuthServiceImpl implements AuthService {
             decryptedPassword = rsa.decryptStr(dto.getNewPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
         } catch (Exception e) {
             throw new BusinessException("密码解密失败");
+        }
+
+        String decryptedConfirmPassword;
+        try {
+            decryptedConfirmPassword = rsa.decryptStr(dto.getConfirmPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
+        } catch (Exception e) {
+            throw new BusinessException("确认密码解密失败");
+        }
+
+        if (!decryptedPassword.equals(decryptedConfirmPassword)) {
+            throw new BusinessException("两次输入的密码不一致");
+        }
+
+        if (decryptedPassword.length() < 6 || decryptedPassword.length() > 20) {
+            throw new BusinessException("密码长度必须在6-20之间");
         }
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
