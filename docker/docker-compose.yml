@@ -8,12 +8,20 @@ services:
       MYSQL_DATABASE: exam_db
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_general_ci
+      TZ: Asia/Shanghai
+      LANG: C.UTF-8
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    command: --default-authentication-plugin=mysql_native_password
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --init-connect='SET NAMES utf8mb4'
+      - --lower_case_table_names=1
     networks:
       - exam-network
     healthcheck:
@@ -27,10 +35,13 @@ services:
     image: redis:7-alpine
     container_name: exam-redis
     restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - exam-network
     healthcheck:
@@ -47,14 +58,18 @@ services:
     container_name: exam-backend
     restart: unless-stopped
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SERVER_PORT: 6080
+      TZ: Asia/Shanghai
+      JAVA_OPTS: -Duser.timezone=Asia/Shanghai -Dfile.encoding=UTF-8
     ports:
       - "6080:6080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -69,8 +84,12 @@ services:
       dockerfile: docker/frontend.Dockerfile
     container_name: exam-frontend
     restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
     ports:
       - "6070:80"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       - backend
     networks:

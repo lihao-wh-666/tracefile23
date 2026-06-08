@@ -35,3 +35,21 @@ export function getMyRecordList(params) {
 export function getMyWrongQuestions(params) {
   return request.get('/record/my/wrong-questions', { params })
 }
+
+export function exportExcel(examId) {
+  const params = {}
+  if (examId) params.examId = examId
+  return request.get('/record/export/excel', { params, responseType: 'blob' })
+}
+
+export function exportCsv(examId) {
+  const params = {}
+  if (examId) params.examId = examId
+  return request.get('/record/export/csv', { params, responseType: 'blob' })
+}
+
+export function exportPdf(examId) {
+  const params = {}
+  if (examId) params.examId = examId
+  return request.get('/record/export/pdf', { params, responseType: 'blob' })
+}

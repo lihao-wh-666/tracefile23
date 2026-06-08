@@ -21,7 +21,7 @@
                 搜索
               </el-button>
               <el-button @click="handleReset">重置</el-button>
-              <el-button type="success" @click="handleAdd">
+              <el-button v-if="isAdminOrTeacher" type="success" @click="handleAdd">
                 <el-icon><Plus /></el-icon>
                 添加考试
               </el-button>
@@ -48,8 +48,10 @@
             <template #default="{ row }">
               <el-button v-if="row.status === 1" type="primary" size="small" link @click="handleTake(row)">参加</el-button>
               <el-button size="small" link @click="handleView(row)">查看</el-button>
-              <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
-              <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
+              <template v-if="isAdminOrTeacher">
+                <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
+                <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -88,8 +90,10 @@
         <div class="item-actions">
           <el-button v-if="item.status === 1" type="primary" size="small" @click="handleTake(item)">参加</el-button>
           <el-button size="small" @click="handleView(item)">查看</el-button>
-          <el-button type="warning" size="small" @click="handleEdit(item)">编辑</el-button>
-          <el-button type="danger" size="small" @click="handleDelete(item)">删除</el-button>
+          <template v-if="isAdminOrTeacher">
+            <el-button type="warning" size="small" @click="handleEdit(item)">编辑</el-button>
+            <el-button type="danger" size="small" @click="handleDelete(item)">删除</el-button>
+          </template>
         </div>
       </div>
     </div>
@@ -105,10 +109,26 @@
           </el-select>
         </el-form-item>
         <el-form-item label="开始时间" prop="startTime">
-          <el-date-picker v-model="form.startTime" type="datetime" placeholder="请选择开始时间" style="width: 100%" />
+          <el-date-picker
+            v-model="form.startTime"
+            type="datetime"
+            placeholder="请选择开始时间"
+            style="width: 100%"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            :default-time="new Date()"
+          />
         </el-form-item>
         <el-form-item label="结束时间" prop="endTime">
-          <el-date-picker v-model="form.endTime" type="datetime" placeholder="请选择结束时间" style="width: 100%" />
+          <el-date-picker
+            v-model="form.endTime"
+            type="datetime"
+            placeholder="请选择结束时间"
+            style="width: 100%"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            :default-time="new Date()"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -133,14 +153,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { getExamPage, addExam, updateExam, deleteExam, getExamDetail } from '../../api/exam'
 import { getPaperPage } from '../../api/paper'
+import { useUserStore } from '../../store/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const tableData = ref([])
 const paperList = ref([])
 const dialogVisible = ref(false)
@@ -150,6 +172,11 @@ const submitLoading = ref(false)
 const formRef = ref(null)
 const editingId = ref(null)
 const detailData = ref({})
+
+const isAdminOrTeacher = computed(() => {
+  const role = userStore.userInfo?.role
+  return role === 1 || role === 2
+})
 
 const searchForm = reactive({ status: null })
 
@@ -262,7 +289,9 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   loadData()
-  loadPapers()
+  if (isAdminOrTeacher.value) {
+    loadPapers()
+  }
 })
 </script>
 

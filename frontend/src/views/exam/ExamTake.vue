@@ -223,7 +223,12 @@ const doSubmit = async (auto) => {
       auto ? '考试时间已到' : '提交成功',
       { confirmButtonText: '查看成绩', type: 'success' }
     )
-    router.push('/score')
+    const role = userStore.userInfo?.role
+    if (role === 1 || role === 2) {
+      router.push('/score')
+    } else {
+      router.push('/personal-score')
+    }
   } catch {
     submitted = false
   }

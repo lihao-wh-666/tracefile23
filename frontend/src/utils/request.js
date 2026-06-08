@@ -13,8 +13,11 @@ request.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    if (!(config.data instanceof FormData)) {
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+    if (!isFormData) {
       config.headers['Content-Type'] = config.headers['Content-Type'] || 'application/json'
+    } else {
+      delete config.headers['Content-Type']
     }
     return config
   },

@@ -28,7 +28,7 @@ public class PaperController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('1', '2')")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<PaperVO> getDetail(@PathVariable Long id) {
         return Result.ok(paperService.getDetail(id));
     }

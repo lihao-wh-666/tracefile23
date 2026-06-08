@@ -7,8 +7,13 @@ COPY backend/src ./src
 RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:11-jre
+ENV TZ=Asia/Shanghai
+ENV LANG=C.UTF-8
+ENV LANGUAGE=C.UTF-8
+ENV LC_ALL=C.UTF-8
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' > /etc/timezone
 VOLUME /tmp
 WORKDIR /app
 COPY --from=build /app/target/exam-system-1.0.0.jar app.jar
 EXPOSE 6080
-ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=6080"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar --server.port=6080"]

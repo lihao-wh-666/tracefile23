@@ -26,4 +26,10 @@ public interface ExamRecordService {
     IPage<ExamRecordVO> getMyRecords(Integer current, Integer size, Long userId);
 
     IPage<WrongQuestionVO> getWrongQuestions(Integer current, Integer size, Long userId);
+
+    byte[] exportExcel(Long examId) throws Exception;
+
+    byte[] exportCsv(Long examId) throws Exception;
+
+    byte[] exportPdf(Long examId) throws Exception;
 }

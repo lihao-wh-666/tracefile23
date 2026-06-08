@@ -12,6 +12,14 @@ import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
 import com.exam.vo.WrongQuestionVO;
+import com.lowagie.text.*;
+import com.lowagie.text.Font;
+import com.lowagie.text.pdf.BaseFont;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -520,5 +528,209 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 vo.setTotalScore(paper.getTotalScore());
             }
         }
+    }
+
+    private List<ExamRecordVO> getRecordsForExport(Long examId) {
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        if (examId != null) {
+            wrapper.eq(ExamRecord::getExamId, examId);
+        }
+        wrapper.in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED);
+        wrapper.orderByDesc(ExamRecord::getSubmitTime);
+        List<ExamRecord> records = examRecordMapper.selectList(wrapper);
+
+        List<ExamRecordVO> voList = records.stream()
+                .map(this::buildRecordVO)
+                .collect(Collectors.toList());
+        fillBatchInfo(voList);
+        return voList;
+    }
+
+    @Override
+    public byte[] exportExcel(Long examId) throws Exception {
+        List<ExamRecordVO> records = getRecordsForExport(examId);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("成绩统计");
+
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        String[] headers = {"序号", "考试名称", "学生姓名", "用户名", "分数", "总分", "状态", "提交时间", "用时(分钟)"};
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        int rowNum = 1;
+        for (ExamRecordVO record : records) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(rowNum - 1);
+            row.createCell(1).setCellValue(record.getExamName() != null ? record.getExamName() : "");
+            row.createCell(2).setCellValue(record.getRealName() != null ? record.getRealName() : "");
+            row.createCell(3).setCellValue(record.getUserName() != null ? record.getUserName() : "");
+            row.createCell(4).setCellValue(record.getScore() != null ? record.getScore() : 0);
+            row.createCell(5).setCellValue(record.getTotalScore() != null ? record.getTotalScore() : 0);
+            row.createCell(6).setCellValue(getStatusText(record.getStatus()));
+            row.createCell(7).setCellValue(record.getSubmitTime() != null ? record.getSubmitTime().toString() : "");
+            row.createCell(8).setCellValue(record.getDuration() != null ? record.getDuration() : 0);
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        workbook.write(outputStream);
+        workbook.close();
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] exportCsv(Long examId) throws Exception {
+        List<ExamRecordVO> records = getRecordsForExport(examId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("序号,考试名称,学生姓名,用户名,分数,总分,状态,提交时间,用时(分钟)\n");
+
+        int rowNum = 1;
+        for (ExamRecordVO record : records) {
+            sb.append(rowNum++).append(",");
+            sb.append(escapeCsv(record.getExamName())).append(",");
+            sb.append(escapeCsv(record.getRealName())).append(",");
+            sb.append(escapeCsv(record.getUserName())).append(",");
+            sb.append(record.getScore() != null ? record.getScore() : 0).append(",");
+            sb.append(record.getTotalScore() != null ? record.getTotalScore() : 0).append(",");
+            sb.append(escapeCsv(getStatusText(record.getStatus()))).append(",");
+            sb.append(record.getSubmitTime() != null ? record.getSubmitTime().toString() : "").append(",");
+            sb.append(record.getDuration() != null ? record.getDuration() : 0).append("\n");
+        }
+
+        return sb.toString().getBytes("UTF-8");
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
+    private String getStatusText(Integer status) {
+        if (status == null) return "未知";
+        switch (status) {
+            case Constants.RECORD_EXAMING:
+                return "考试中";
+            case Constants.RECORD_SUBMITTED:
+                return "已提交";
+            case Constants.RECORD_GRADED:
+                return "已阅卷";
+            default:
+                return "未知";
+        }
+    }
+
+    @Override
+    public byte[] exportPdf(Long examId) throws Exception {
+        List<ExamRecordVO> records = getRecordsForExport(examId);
+        ScoreStatVO stat = null;
+        if (examId != null) {
+            List<ScoreStatVO> stats = scoreStats(examId);
+            if (!stats.isEmpty()) {
+                stat = stats.get(0);
+            }
+        }
+
+        Document document = new Document(PageSize.A4.rotate());
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        PdfWriter.getInstance(document, outputStream);
+        document.open();
+
+        BaseFont bfChinese = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.NOT_EMBEDDED);
+        Font titleFont = new Font(bfChinese, 18, Font.BOLD);
+        Font headerFont = new Font(bfChinese, 12, Font.BOLD);
+        Font normalFont = new Font(bfChinese, 10, Font.NORMAL);
+
+        String title = "成绩统计报表";
+        if (stat != null && stat.getExamName() != null) {
+            title = stat.getExamName() + " - 成绩统计报表";
+        }
+        Paragraph titlePara = new Paragraph(title, titleFont);
+        titlePara.setAlignment(Element.ALIGN_CENTER);
+        titlePara.setSpacingAfter(20);
+        document.add(titlePara);
+
+        if (stat != null) {
+            PdfPTable statTable = new PdfPTable(6);
+            statTable.setWidthPercentage(100);
+            statTable.setSpacingAfter(20);
+
+            String[] statLabels = {"参考人数", "平均分", "最高分", "最低分", "及格人数", "及格率"};
+            String[] statValues = {
+                    String.valueOf(stat.getTotalCount()),
+                    String.format("%.2f", stat.getAvgScore()),
+                    String.valueOf(stat.getMaxScore()),
+                    String.valueOf(stat.getMinScore()),
+                    String.valueOf(stat.getPassCount()),
+                    String.format("%.2f%%", stat.getPassRate())
+            };
+
+            for (int i = 0; i < statLabels.length; i++) {
+                PdfPCell labelCell = new PdfPCell(new Phrase(statLabels[i], headerFont));
+                labelCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                labelCell.setPadding(8);
+                statTable.addCell(labelCell);
+            }
+            for (int i = 0; i < statValues.length; i++) {
+                PdfPCell valueCell = new PdfPCell(new Phrase(statValues[i], normalFont));
+                valueCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                valueCell.setPadding(8);
+                statTable.addCell(valueCell);
+            }
+            document.add(statTable);
+        }
+
+        PdfPTable table = new PdfPTable(8);
+        table.setWidthPercentage(100);
+
+        String[] headers = {"序号", "学生姓名", "用户名", "分数", "总分", "状态", "提交时间", "用时(分钟)"};
+        for (String header : headers) {
+            PdfPCell cell = new PdfPCell(new Phrase(header, headerFont));
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cell.setPadding(8);
+            cell.setBackgroundColor(new com.lowagie.text.Color(240, 240, 240));
+            table.addCell(cell);
+        }
+
+        int rowNum = 1;
+        for (ExamRecordVO record : records) {
+            table.addCell(createPdfCell(String.valueOf(rowNum++), normalFont));
+            table.addCell(createPdfCell(record.getRealName() != null ? record.getRealName() : "", normalFont));
+            table.addCell(createPdfCell(record.getUserName() != null ? record.getUserName() : "", normalFont));
+            table.addCell(createPdfCell(String.valueOf(record.getScore() != null ? record.getScore() : 0), normalFont));
+            table.addCell(createPdfCell(String.valueOf(record.getTotalScore() != null ? record.getTotalScore() : 0), normalFont));
+            table.addCell(createPdfCell(getStatusText(record.getStatus()), normalFont));
+            table.addCell(createPdfCell(record.getSubmitTime() != null ? record.getSubmitTime().toString() : "", normalFont));
+            table.addCell(createPdfCell(String.valueOf(record.getDuration() != null ? record.getDuration() : 0), normalFont));
+        }
+
+        document.add(table);
+        document.close();
+        return outputStream.toByteArray();
+    }
+
+    private PdfPCell createPdfCell(String text, Font font) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setPadding(6);
+        return cell;
     }
 }

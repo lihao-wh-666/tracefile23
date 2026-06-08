@@ -26,11 +26,19 @@ export function importQuestions(file, subjectId) {
   if (subjectId) {
     formData.append('subjectId', subjectId)
   }
-  return request.post('/question/import', formData)
+  return request({
+    url: '/question/import',
+    method: 'post',
+    data: formData,
+    timeout: 60000
+  })
 }
 
 export function downloadTemplate() {
-  return request.get('/question/template', {
-    responseType: 'blob'
+  return request({
+    url: '/question/template',
+    method: 'get',
+    responseType: 'blob',
+    timeout: 30000
   })
 }

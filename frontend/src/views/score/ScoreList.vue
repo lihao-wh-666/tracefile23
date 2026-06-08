@@ -9,6 +9,21 @@
             <el-option v-for="e in examList" :key="e.id" :label="e.name" :value="e.id" />
           </el-select>
         </el-form-item>
+        <el-form-item class="search-item export-item">
+          <el-dropdown @command="handleExport">
+            <el-button type="primary">
+              导出成绩
+              <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+                <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+                <el-dropdown-item command="pdf">导出 PDF</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </el-form-item>
       </el-form>
     </el-card>
 
@@ -160,8 +175,9 @@
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import { getRecordPage, getRecordDetail, getScoreStats, getRecordAnswers } from '../../api/record'
+import { getRecordPage, getRecordDetail, getScoreStats, getRecordAnswers, exportExcel, exportCsv, exportPdf } from '../../api/record'
 import { getExamPage } from '../../api/exam'
 import { getPaperDetail } from '../../api/paper'
 
@@ -302,6 +318,47 @@ const handleDetail = async (row) => {
     detailVisible.value = true
   } catch {
     ElMessage.error('加载详情失败')
+  }
+}
+
+const downloadFile = (blob, fileName) => {
+  const url = window.URL.createObjectURL(new Blob([blob]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', fileName)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+const handleExport = async (type) => {
+  try {
+    let data
+    let fileName
+    const examId = filterExamId.value
+
+    switch (type) {
+      case 'excel':
+        data = await exportExcel(examId)
+        fileName = `成绩统计_${Date.now()}.xlsx`
+        break
+      case 'csv':
+        data = await exportCsv(examId)
+        fileName = `成绩统计_${Date.now()}.csv`
+        break
+      case 'pdf':
+        data = await exportPdf(examId)
+        fileName = `成绩统计_${Date.now()}.pdf`
+        break
+      default:
+        return
+    }
+
+    downloadFile(data, fileName)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
   }
 }
 
