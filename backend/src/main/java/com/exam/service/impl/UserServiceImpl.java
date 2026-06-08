@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.common.BusinessException;
 import com.exam.common.ErrorCode;
+import com.exam.dto.ChangePasswordDTO;
+import com.exam.dto.UpdateProfileDTO;
 import com.exam.dto.UserDTO;
 import com.exam.entity.User;
 import com.exam.mapper.UserMapper;
@@ -115,5 +117,55 @@ public class UserServiceImpl implements UserService {
         user.setId(id);
         user.setStatus(status);
         return userMapper.updateById(user) > 0;
+    }
+
+    @Override
+    public boolean updateProfile(Long userId, UpdateProfileDTO dto) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setRealName(dto.getRealName());
+        updateUser.setPhone(dto.getPhone());
+        updateUser.setEmail(dto.getEmail());
+        return userMapper.updateById(updateUser) > 0;
+    }
+
+    @Override
+    public boolean changePassword(Long userId, ChangePasswordDTO dto) {
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new BusinessException("两次输入的新密码不一致");
+        }
+        if (dto.getNewPassword().length() < 6) {
+            throw new BusinessException("新密码长度不能少于6位");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        String decryptedOldPassword = rsa.decryptStr(dto.getOldPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
+        if (!passwordEncoder.matches(decryptedOldPassword, user.getPassword())) {
+            throw new BusinessException("旧密码不正确");
+        }
+        String decryptedNewPassword = rsa.decryptStr(dto.getNewPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setPassword(passwordEncoder.encode(decryptedNewPassword));
+        return userMapper.updateById(updateUser) > 0;
+    }
+
+    @Override
+    public String updateAvatar(Long userId, String avatarUrl) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setAvatar(avatarUrl);
+        userMapper.updateById(updateUser);
+        return avatarUrl;
     }
 }

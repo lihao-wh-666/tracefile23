@@ -4,14 +4,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.exam.annotation.Log;
 import com.exam.common.Constants;
 import com.exam.common.Result;
+import com.exam.dto.ChangePasswordDTO;
+import com.exam.dto.UpdateProfileDTO;
 import com.exam.dto.UserDTO;
 import com.exam.entity.User;
 import com.exam.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/user")
@@ -25,6 +31,55 @@ public class UserController {
         Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName());
         return Result.ok(userService.getById(userId));
+    }
+
+    @PutMapping("/profile")
+    @Log(module = "个人中心", operation = "更新个人信息")
+    public Result<Boolean> updateProfile(@RequestBody @Valid UpdateProfileDTO dto) {
+        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName());
+        return Result.ok(userService.updateProfile(userId, dto));
+    }
+
+    @PutMapping("/password")
+    @Log(module = "个人中心", operation = "修改密码")
+    public Result<Boolean> changePassword(@RequestBody @Valid ChangePasswordDTO dto) {
+        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName());
+        return Result.ok(userService.changePassword(userId, dto));
+    }
+
+    @PostMapping("/avatar")
+    @Log(module = "个人中心", operation = "上传头像")
+    public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
+        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName());
+        if (file.isEmpty()) {
+            return Result.fail("请选择要上传的文件");
+        }
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            return Result.fail("文件名不能为空");
+        }
+        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        if (!".jpg".equalsIgnoreCase(extension) && !".jpeg".equalsIgnoreCase(extension)
+                && !".png".equalsIgnoreCase(extension) && !".gif".equalsIgnoreCase(extension)) {
+            return Result.fail("只支持 jpg、jpeg、png、gif 格式的图片");
+        }
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return Result.fail("图片大小不能超过 5MB");
+        }
+        String fileName = UUID.randomUUID().toString().replace("-", "") + extension;
+        String uploadDir = "./uploads/avatar";
+        File dir = new File(uploadDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        File destFile = new File(uploadDir + "/" + fileName);
+        file.transferTo(destFile);
+        String avatarUrl = "/uploads/avatar/" + fileName;
+        userService.updateAvatar(userId, avatarUrl);
+        return Result.ok(avatarUrl);
     }
 
     @GetMapping("/page")

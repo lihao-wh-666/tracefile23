@@ -1,6 +1,8 @@
 package com.exam.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.exam.dto.ChangePasswordDTO;
+import com.exam.dto.UpdateProfileDTO;
 import com.exam.dto.UserDTO;
 import com.exam.entity.User;
 
@@ -17,4 +19,10 @@ public interface UserService {
     boolean removeById(Long id);
 
     boolean updateStatus(Long id, Integer status);
+
+    boolean updateProfile(Long userId, UpdateProfileDTO dto);
+
+    boolean changePassword(Long userId, ChangePasswordDTO dto);
+
+    String updateAvatar(Long userId, String avatarUrl);
 }

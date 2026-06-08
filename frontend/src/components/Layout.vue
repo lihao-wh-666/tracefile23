@@ -6,10 +6,12 @@
       </div>
       <div class="mobile-logo">在线考试系统</div>
       <el-dropdown @command="handleCommand" class="mobile-user">
-        <el-icon :size="22"><UserFilled /></el-icon>
+        <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)">
+          <el-icon :size="18"><UserFilled /></el-icon>
+        </el-avatar>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+            <el-dropdown-item command="profile">个人中心</el-dropdown-item>
             <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -60,6 +62,10 @@
           <el-icon><UserFilled /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/profile">
+          <el-icon><Setting /></el-icon>
+          <span>个人中心</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -67,12 +73,15 @@
       <el-header class="desktop-header mobile-hidden">
         <el-dropdown @command="handleCommand">
           <span class="user-dropdown">
-            {{ userStore.userInfo?.username || '用户' }}
+            <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)" class="user-avatar">
+              <el-icon :size="18"><UserFilled /></el-icon>
+            </el-avatar>
+            <span class="username-text">{{ userStore.userInfo?.username || '用户' }}</span>
             <el-icon><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -88,15 +97,24 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
+const router = useRouter()
 const userStore = useUserStore()
 const sidebarOpen = ref(false)
 
 const hasRole = (roles) => {
   if (!userStore.userInfo?.role) return false
   return roles.includes(userStore.userInfo.role)
+}
+
+const getAvatarUrl = (avatar) => {
+  if (!avatar) return ''
+  if (avatar.startsWith('http')) return avatar
+  if (avatar.startsWith('/api')) return avatar
+  return '/api' + avatar
 }
 
 const toggleSidebar = () => {
@@ -116,6 +134,8 @@ const handleMenuSelect = () => {
 const handleCommand = (command) => {
   if (command === 'logout') {
     userStore.logout()
+  } else if (command === 'profile') {
+    router.push('/profile')
   }
 }
 
@@ -285,9 +305,17 @@ onUnmounted(() => {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   font-size: 14px;
   color: #333;
+}
+
+.user-avatar {
+  border: 2px solid #e4e7ed;
+}
+
+.username-text {
+  font-weight: 500;
 }
 
 .main-content {
