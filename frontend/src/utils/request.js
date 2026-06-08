@@ -28,6 +28,9 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   response => {
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code !== ERROR_CODE.SUCCESS) {
       return errorHandler.handleError(res, {

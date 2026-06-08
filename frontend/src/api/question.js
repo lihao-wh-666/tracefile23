@@ -19,3 +19,18 @@ export function updateQuestion(id, data) {
 export function deleteQuestion(id) {
   return request.delete(`/question/${id}`)
 }
+
+export function importQuestions(file, subjectId) {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (subjectId) {
+    formData.append('subjectId', subjectId)
+  }
+  return request.post('/question/import', formData)
+}
+
+export function downloadTemplate() {
+  return request.get('/question/template', {
+    responseType: 'blob'
+  })
+}

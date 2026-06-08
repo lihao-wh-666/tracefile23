@@ -34,6 +34,10 @@
                 <el-icon><Plus /></el-icon>
                 新增
               </el-button>
+              <el-button type="warning" @click="handleImport">
+                <el-icon><Upload /></el-icon>
+                批量导入
+              </el-button>
             </div>
           </el-col>
         </el-row>
@@ -97,6 +101,83 @@
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="importDialogVisible" title="批量导入题目" width="500px" class="responsive-dialog" destroy-on-close>
+      <el-form label-width="80px" class="import-form">
+        <el-form-item label="所属科目">
+          <el-select v-model="importForm.subjectId" placeholder="请选择科目" style="width: 100%">
+            <el-option v-for="s in subjectList" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="导入文件">
+          <el-upload
+            ref="uploadRef"
+            :auto-upload="false"
+            :show-file-list="true"
+            :limit="1"
+            :on-exceed="handleFileExceed"
+            :before-upload="beforeFileUpload"
+            :on-change="handleFileChange"
+            accept=".xlsx,.xls,.csv"
+            drag
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 .xlsx、.xls、.csv 格式文件
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" link @click="handleDownloadTemplate">
+            <el-icon><Download /></el-icon>
+            下载导入模板
+          </el-button>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importing" @click="handleImportSubmit">开始导入</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="resultDialogVisible" title="导入结果" width="600px" class="responsive-dialog" destroy-on-close>
+      <div class="import-result">
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-card shadow="hover" class="result-card total">
+              <div class="result-num">{{ importResult.totalCount }}</div>
+              <div class="result-label">总条数</div>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card shadow="hover" class="result-card success">
+              <div class="result-num">{{ importResult.successCount }}</div>
+              <div class="result-label">成功</div>
+            </el-card>
+          </el-col>
+          <el-col :span="8">
+            <el-card shadow="hover" class="result-card fail">
+              <div class="result-num">{{ importResult.failCount }}</div>
+              <div class="result-label">失败</div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <div v-if="importResult.errors && importResult.errors.length > 0" class="error-list">
+          <h4>错误详情</h4>
+          <el-table :data="importResult.errors" border stripe style="width: 100%">
+            <el-table-column prop="rowNum" label="行号" width="80" align="center" />
+            <el-table-column prop="message" label="错误信息" min-width="200" />
+          </el-table>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="resultDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" class="responsive-dialog" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="80px" class="responsive-form">
@@ -169,8 +250,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus } from '@element-plus/icons-vue'
-import { getQuestionPage, getQuestionDetail, addQuestion, updateQuestion, deleteQuestion } from '../../api/question'
+import { Search, Plus, Upload, UploadFilled, Download } from '@element-plus/icons-vue'
+import { getQuestionPage, getQuestionDetail, addQuestion, updateQuestion, deleteQuestion, importQuestions, downloadTemplate } from '../../api/question'
 import { getSubjectList } from '../../api/subject'
 
 const typeTagMap = { '单选': '', '多选': 'success', '判断': 'warning', '填空': 'info', '问答': 'danger' }
@@ -185,6 +266,21 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增题目')
 const editingId = ref(null)
 const formRef = ref(null)
+
+const importDialogVisible = ref(false)
+const resultDialogVisible = ref(false)
+const importing = ref(false)
+const uploadRef = ref(null)
+const importFile = ref(null)
+const importForm = reactive({
+  subjectId: ''
+})
+const importResult = reactive({
+  totalCount: 0,
+  successCount: 0,
+  failCount: 0,
+  errors: []
+})
 
 const getDefaultForm = () => ({
   subjectId: '',
@@ -287,6 +383,75 @@ const handleDelete = (row) => {
     .catch(() => {})
 }
 
+const handleImport = () => {
+  importForm.subjectId = searchForm.subjectId || ''
+  importFile.value = null
+  if (uploadRef.value) {
+    uploadRef.value.clearFiles()
+  }
+  importDialogVisible.value = true
+}
+
+const handleFileChange = (file) => {
+  importFile.value = file.raw
+}
+
+const handleFileExceed = () => {
+  ElMessage.warning('只能上传一个文件')
+}
+
+const beforeFileUpload = (file) => {
+  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
+  if (!isExcel) {
+    ElMessage.error('只支持 Excel 和 CSV 格式文件!')
+    return false
+  }
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('文件大小不能超过 10MB!')
+    return false
+  }
+  return true
+}
+
+const handleImportSubmit = async () => {
+  if (!importForm.subjectId) {
+    ElMessage.warning('请选择所属科目')
+    return
+  }
+  if (!importFile.value) {
+    ElMessage.warning('请选择要导入的文件')
+    return
+  }
+  importing.value = true
+  try {
+    const res = await importQuestions(importFile.value, importForm.subjectId)
+    Object.assign(importResult, res.data)
+    importDialogVisible.value = false
+    resultDialogVisible.value = true
+    fetchData()
+  } finally {
+    importing.value = false
+  }
+}
+
+const handleDownloadTemplate = async () => {
+  try {
+    const res = await downloadTemplate()
+    const blob = new Blob([res])
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', '题目导入模板.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    ElMessage.error('模板下载失败')
+  }
+}
+
 onMounted(() => {
   fetchSubjects()
   fetchData()
@@ -385,11 +550,61 @@ onMounted(() => {
 @media screen and (max-width: 768px) {
   .search-actions .el-button {
     flex: 1;
-    min-width: calc(33.33% - 6px);
+    min-width: calc(25% - 6px);
   }
 
   .item-actions .el-button {
     flex: 1;
   }
+}
+
+.import-form {
+  margin-top: 10px;
+}
+
+.import-result {
+  padding: 10px 0;
+}
+
+.result-card {
+  text-align: center;
+  border-radius: 8px;
+}
+
+.result-card .result-num {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.result-card.total .result-num {
+  color: #409eff;
+}
+
+.result-card.success .result-num {
+  color: #67c23a;
+}
+
+.result-card.fail .result-num {
+  color: #f56c6c;
+}
+
+.result-card .result-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.error-list {
+  margin-top: 20px;
+}
+
+.error-list h4 {
+  margin-bottom: 12px;
+  color: #f56c6c;
+  font-size: 14px;
+}
+
+.el-upload-dragger {
+  padding: 20px !important;
 }
 </style>
