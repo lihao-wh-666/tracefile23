@@ -34,7 +34,6 @@ public class LogAspect {
 
     @Around("@annotation(com.exam.annotation.Log)")
     public Object around(ProceedingJoinPoint point) throws Throwable {
-        long beginTime = System.currentTimeMillis();
         MethodSignature signature = (MethodSignature) point.getSignature();
         Method method = signature.getMethod();
         Log logAnnotation = method.getAnnotation(Log.class);

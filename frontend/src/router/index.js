@@ -28,43 +28,43 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('../views/dashboard/Dashboard.vue'),
-        meta: { title: '首页' }
+        meta: { title: '首页', roles: [1, 2, 3] }
       },
       {
         path: 'question',
         name: 'QuestionList',
         component: () => import('../views/question/QuestionList.vue'),
-        meta: { title: '题库管理' }
+        meta: { title: '题库管理', roles: [1, 2] }
       },
       {
         path: 'paper',
         name: 'PaperList',
         component: () => import('../views/paper/PaperList.vue'),
-        meta: { title: '试卷管理' }
+        meta: { title: '试卷管理', roles: [1, 2] }
       },
       {
         path: 'exam',
         name: 'ExamList',
         component: () => import('../views/exam/ExamList.vue'),
-        meta: { title: '考试管理' }
+        meta: { title: '考试管理', roles: [1, 2, 3] }
       },
       {
         path: 'exam/take/:id',
         name: 'ExamTake',
         component: () => import('../views/exam/ExamTake.vue'),
-        meta: { title: '参加考试' }
+        meta: { title: '参加考试', roles: [1, 2, 3] }
       },
       {
         path: 'score',
         name: 'ScoreList',
         component: () => import('../views/score/ScoreList.vue'),
-        meta: { title: '成绩统计' }
+        meta: { title: '成绩统计', roles: [1, 2] }
       },
       {
         path: 'personal-score',
         name: 'PersonalScore',
         component: () => import('../views/score/PersonalScore.vue'),
-        meta: { title: '个人成绩台账' }
+        meta: { title: '个人成绩台账', roles: [1, 2, 3] }
       },
       {
         path: 'user',

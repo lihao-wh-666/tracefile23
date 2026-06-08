@@ -6,6 +6,7 @@ import com.exam.dto.ExamDTO;
 import com.exam.service.ExamService;
 import com.exam.vo.ExamVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -18,6 +19,7 @@ public class ExamController {
     private ExamService examService;
 
     @GetMapping("/page")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<IPage<ExamVO>> page(@RequestParam(defaultValue = "1") Integer current,
                                       @RequestParam(defaultValue = "10") Integer size,
                                       @RequestParam(required = false) Integer status) {
@@ -25,21 +27,25 @@ public class ExamController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<ExamVO> getDetail(@PathVariable Long id) {
         return Result.ok(examService.getDetail(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> save(@RequestBody @Valid ExamDTO dto) {
         return Result.ok(examService.save(dto));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> update(@PathVariable Long id, @RequestBody @Valid ExamDTO dto) {
         return Result.ok(examService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> remove(@PathVariable Long id) {
         return Result.ok(examService.removeById(id));
     }

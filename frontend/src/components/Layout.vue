@@ -32,31 +32,31 @@
         router
         @select="handleMenuSelect"
       >
-        <el-menu-item index="/dashboard">
+        <el-menu-item index="/dashboard" v-if="hasRole([1, 2, 3])">
           <el-icon><HomeFilled /></el-icon>
           <span>首页</span>
         </el-menu-item>
-        <el-menu-item index="/question">
+        <el-menu-item index="/question" v-if="hasRole([1, 2])">
           <el-icon><Document /></el-icon>
           <span>题库管理</span>
         </el-menu-item>
-        <el-menu-item index="/paper">
+        <el-menu-item index="/paper" v-if="hasRole([1, 2])">
           <el-icon><Notebook /></el-icon>
           <span>试卷管理</span>
         </el-menu-item>
-        <el-menu-item index="/exam">
+        <el-menu-item index="/exam" v-if="hasRole([1, 2, 3])">
           <el-icon><EditPen /></el-icon>
           <span>考试管理</span>
         </el-menu-item>
-        <el-menu-item index="/score">
+        <el-menu-item index="/score" v-if="hasRole([1, 2])">
           <el-icon><DataAnalysis /></el-icon>
           <span>成绩统计</span>
         </el-menu-item>
-        <el-menu-item index="/personal-score">
+        <el-menu-item index="/personal-score" v-if="hasRole([1, 2, 3])">
           <el-icon><User /></el-icon>
           <span>个人成绩台账</span>
         </el-menu-item>
-        <el-menu-item index="/user" v-if="userStore.userInfo?.role === 1">
+        <el-menu-item index="/user" v-if="hasRole([1])">
           <el-icon><UserFilled /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
@@ -93,6 +93,11 @@ import { useUserStore } from '../store/user'
 
 const userStore = useUserStore()
 const sidebarOpen = ref(false)
+
+const hasRole = (roles) => {
+  if (!userStore.userInfo?.role) return false
+  return roles.includes(userStore.userInfo.role)
+}
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value

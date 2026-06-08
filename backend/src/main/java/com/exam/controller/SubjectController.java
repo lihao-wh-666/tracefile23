@@ -5,6 +5,7 @@ import com.exam.common.Result;
 import com.exam.entity.Subject;
 import com.exam.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -18,6 +19,7 @@ public class SubjectController {
     private SubjectService subjectService;
 
     @GetMapping("/page")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<IPage<Subject>> page(@RequestParam(defaultValue = "1") Integer current,
                                        @RequestParam(defaultValue = "10") Integer size,
                                        @RequestParam(required = false) String name) {
@@ -25,26 +27,31 @@ public class SubjectController {
     }
 
     @GetMapping("/list")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<List<Subject>> list() {
         return Result.ok(subjectService.list());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Subject> getById(@PathVariable Long id) {
         return Result.ok(subjectService.getById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> save(@RequestBody @Valid Subject subject) {
         return Result.ok(subjectService.save(subject));
     }
 
     @PutMapping
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> update(@RequestBody @Valid Subject subject) {
         return Result.ok(subjectService.updateById(subject));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<Boolean> remove(@PathVariable Long id) {
         return Result.ok(subjectService.removeById(id));
     }

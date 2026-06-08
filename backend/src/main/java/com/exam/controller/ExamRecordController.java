@@ -12,6 +12,7 @@ import com.exam.vo.ScoreStatVO;
 import com.exam.vo.WrongQuestionVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class ExamRecordController {
     private ExamAnswerMapper examAnswerMapper;
 
     @GetMapping("/page")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<IPage<ExamRecordVO>> page(@RequestParam(defaultValue = "1") Integer current,
                                             @RequestParam(defaultValue = "10") Integer size,
                                             @RequestParam(required = false) Long examId,
@@ -38,11 +40,13 @@ public class ExamRecordController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<ExamRecordVO> getDetail(@PathVariable Long id) {
         return Result.ok(recordService.getDetail(id));
     }
 
     @GetMapping("/{id}/answers")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<List<ExamAnswer>> getRecordAnswers(@PathVariable Long id) {
         List<ExamAnswer> answers = examAnswerMapper.selectList(
                 new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, id));
@@ -50,29 +54,34 @@ public class ExamRecordController {
     }
 
     @PostMapping("/start/{examId}")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<ExamRecordVO> startExam(@PathVariable Long examId) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         return Result.ok(recordService.startExam(examId, userId));
     }
 
     @PostMapping("/submit")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<ExamRecordVO> submitExam(@RequestBody @Valid SubmitExamDTO dto) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         return Result.ok(recordService.submitExam(dto, userId));
     }
 
     @GetMapping("/stats/{examId}")
+    @PreAuthorize("hasAnyRole('1', '2')")
     public Result<List<ScoreStatVO>> scoreStats(@PathVariable Long examId) {
         return Result.ok(recordService.scoreStats(examId));
     }
 
     @GetMapping("/my/stat")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<PersonalScoreStatVO> getMyStat() {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         return Result.ok(recordService.getPersonalStat(userId));
     }
 
     @GetMapping("/my/list")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<IPage<ExamRecordVO>> getMyList(@RequestParam(defaultValue = "1") Integer current,
                                                  @RequestParam(defaultValue = "10") Integer size) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -80,6 +89,7 @@ public class ExamRecordController {
     }
 
     @GetMapping("/my/wrong-questions")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<IPage<WrongQuestionVO>> getMyWrongQuestions(@RequestParam(defaultValue = "1") Integer current,
                                                               @RequestParam(defaultValue = "10") Integer size) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
