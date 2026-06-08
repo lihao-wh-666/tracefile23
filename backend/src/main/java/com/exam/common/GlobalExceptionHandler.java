@@ -15,8 +15,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import java.io.IOException;
 import java.sql.SQLException;
 
 @Slf4j
@@ -112,6 +115,24 @@ public class GlobalExceptionHandler {
     public Result<?> handleSQLException(SQLException e) {
         log.error("SQL异常: ", e);
         return Result.fail(ErrorCode.DATABASE_ERROR.getCode(), "数据库操作异常");
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public Result<?> handleMultipartException(MultipartException e) {
+        log.error("文件上传异常: ", e);
+        return Result.fail(ErrorCode.FILE_UPLOAD_ERROR.getCode(), "文件上传失败");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("文件大小超出限制: {}", e.getMessage());
+        return Result.fail(ErrorCode.FILE_SIZE_ERROR.getCode(), "文件大小超出限制");
+    }
+
+    @ExceptionHandler(IOException.class)
+    public Result<?> handleIOException(IOException e) {
+        log.error("IO异常: ", e);
+        return Result.fail(ErrorCode.FILE_UPLOAD_ERROR.getCode(), "文件操作失败");
     }
 
     @ExceptionHandler(RuntimeException.class)

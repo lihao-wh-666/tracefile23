@@ -17,6 +17,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
 
 @Aspect
 @Component
@@ -46,7 +50,19 @@ public class LogAspect {
         try {
             Object[] args = point.getArgs();
             if (args != null && args.length > 0) {
-                params = objectMapper.writeValueAsString(args);
+                List<Object> filteredArgs = new ArrayList<>();
+                for (Object arg : args) {
+                    if (arg instanceof MultipartFile) {
+                        MultipartFile file = (MultipartFile) arg;
+                        filteredArgs.add("[文件] " + file.getOriginalFilename() + " (" + file.getSize() + " bytes)");
+                    } else if (arg instanceof MultipartFile[]) {
+                        MultipartFile[] files = (MultipartFile[]) arg;
+                        filteredArgs.add("[文件数组] 共 " + files.length + " 个文件");
+                    } else {
+                        filteredArgs.add(arg);
+                    }
+                }
+                params = objectMapper.writeValueAsString(filteredArgs);
                 if (params.length() > 2000) {
                     params = params.substring(0, 2000) + "...";
                 }

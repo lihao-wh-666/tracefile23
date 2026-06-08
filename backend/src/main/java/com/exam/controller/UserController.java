@@ -51,17 +51,21 @@ public class UserController {
 
     @PostMapping("/avatar")
     @Log(module = "个人中心", operation = "上传头像")
-    public Result<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
+    public Result<String> uploadAvatar(@RequestPart("file") MultipartFile file) throws IOException {
         Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName());
         if (file.isEmpty()) {
             return Result.fail("请选择要上传的文件");
         }
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
+        if (originalFilename == null || originalFilename.isEmpty()) {
             return Result.fail("文件名不能为空");
         }
-        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        int dotIndex = originalFilename.lastIndexOf(".");
+        if (dotIndex < 0) {
+            return Result.fail("文件格式不正确");
+        }
+        String extension = originalFilename.substring(dotIndex);
         if (!".jpg".equalsIgnoreCase(extension) && !".jpeg".equalsIgnoreCase(extension)
                 && !".png".equalsIgnoreCase(extension) && !".gif".equalsIgnoreCase(extension)) {
             return Result.fail("只支持 jpg、jpeg、png、gif 格式的图片");
@@ -70,13 +74,14 @@ public class UserController {
             return Result.fail("图片大小不能超过 5MB");
         }
         String fileName = UUID.randomUUID().toString().replace("-", "") + extension;
-        String uploadDir = "./uploads/avatar";
-        File dir = new File(uploadDir);
-        if (!dir.exists()) {
-            dir.mkdirs();
+        String uploadDirPath = System.getProperty("user.dir") + "/uploads/avatar";
+        File uploadDir = new File(uploadDirPath);
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
         }
-        File destFile = new File(uploadDir + "/" + fileName);
-        file.transferTo(destFile);
+        File destFile = new File(uploadDirPath + "/" + fileName);
+        java.nio.file.Files.copy(file.getInputStream(), destFile.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         String avatarUrl = "/uploads/avatar/" + fileName;
         userService.updateAvatar(userId, avatarUrl);
         return Result.ok(avatarUrl);
