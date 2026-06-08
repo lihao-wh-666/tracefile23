@@ -15,11 +15,7 @@ export function changePassword(data) {
 export function uploadAvatar(file) {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/user/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  })
+  return request.post('/user/avatar', formData)
 }
 
 export function getUserPage(params) {

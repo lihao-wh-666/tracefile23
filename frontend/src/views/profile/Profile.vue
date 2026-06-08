@@ -223,11 +223,10 @@ const handleChangePassword = async () => {
   try {
     const encryptedOldPassword = encryptPassword(publicKey.value, passwordForm.oldPassword)
     const encryptedNewPassword = encryptPassword(publicKey.value, passwordForm.newPassword)
-    const encryptedConfirmPassword = encryptPassword(publicKey.value, passwordForm.confirmPassword)
     await changePassword({
       oldPassword: encryptedOldPassword,
       newPassword: encryptedNewPassword,
-      confirmPassword: encryptedConfirmPassword
+      confirmPassword: encryptedNewPassword
     })
     ElMessage.success('密码修改成功')
     passwordForm.oldPassword = ''
