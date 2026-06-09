@@ -11,7 +11,9 @@ ENV TZ=Asia/Shanghai
 ENV LANG=C.UTF-8
 ENV LANGUAGE=C.UTF-8
 ENV LC_ALL=C.UTF-8
-RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' > /etc/timezone
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' > /etc/timezone && \
+    apt-get update && apt-get install -y fonts-wqy-microhei fonts-wqy-zenhei && \
+    rm -rf /var/lib/apt/lists/*
 VOLUME /tmp
 WORKDIR /app
 COPY --from=build /app/target/exam-system-1.0.0.jar app.jar

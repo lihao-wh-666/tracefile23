@@ -12,18 +12,28 @@ import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
 import com.exam.vo.WrongQuestionVO;
-import com.lowagie.text.*;
-import com.lowagie.text.Font;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.awt.Color;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -554,7 +564,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         Sheet sheet = workbook.createSheet("成绩统计");
 
         CellStyle headerStyle = workbook.createCellStyle();
-        Font headerFont = workbook.createFont();
+        org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
         headerFont.setBold(true);
         headerStyle.setFont(headerFont);
         headerStyle.setAlignment(HorizontalAlignment.CENTER);
@@ -654,10 +664,10 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         PdfWriter.getInstance(document, outputStream);
         document.open();
 
-        BaseFont bfChinese = BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.NOT_EMBEDDED);
-        Font titleFont = new Font(bfChinese, 18, Font.BOLD);
-        Font headerFont = new Font(bfChinese, 12, Font.BOLD);
-        Font normalFont = new Font(bfChinese, 10, Font.NORMAL);
+        BaseFont baseFont = getChineseFont();
+        com.lowagie.text.Font titleFont = new com.lowagie.text.Font(baseFont, 18, com.lowagie.text.Font.BOLD);
+        com.lowagie.text.Font headerFont = new com.lowagie.text.Font(baseFont, 12, com.lowagie.text.Font.BOLD);
+        com.lowagie.text.Font normalFont = new com.lowagie.text.Font(baseFont, 10, com.lowagie.text.Font.NORMAL);
 
         String title = "成绩统计报表";
         if (stat != null && stat.getExamName() != null) {
@@ -706,7 +716,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
             PdfPCell cell = new PdfPCell(new Phrase(header, headerFont));
             cell.setHorizontalAlignment(Element.ALIGN_CENTER);
             cell.setPadding(8);
-            cell.setBackgroundColor(new com.lowagie.text.Color(240, 240, 240));
+            cell.setBackgroundColor(new Color(240, 240, 240));
             table.addCell(cell);
         }
 
@@ -727,7 +737,32 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         return outputStream.toByteArray();
     }
 
-    private PdfPCell createPdfCell(String text, Font font) {
+    private BaseFont getChineseFont() {
+        String[] fontNames = {
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/wqy-microhei/wqy-microhei.ttc",
+            "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
+            "STSong-Light"
+        };
+        for (String fontName : fontNames) {
+            try {
+                if (fontName.startsWith("/")) {
+                    return BaseFont.createFont(fontName, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                } else {
+                    return BaseFont.createFont(fontName, "UniGB-UCS2-H", BaseFont.NOT_EMBEDDED);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        try {
+            return BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.EMBEDDED);
+        } catch (Exception ex) {
+            throw new RuntimeException("无法创建PDF字体", ex);
+        }
+    }
+
+    private PdfPCell createPdfCell(String text, com.lowagie.text.Font font) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setPadding(6);
