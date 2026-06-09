@@ -1,6 +1,12 @@
 <template>
-  <router-view />
+  <ErrorBoundary>
+    <router-view />
+  </ErrorBoundary>
 </template>
+
+<script setup>
+import ErrorBoundary from './views/error/ErrorBoundary.vue'
+</script>
 
 <style>
 body {
