@@ -19,6 +19,7 @@ public class Constants {
     public static final int RECORD_EXAMING = 0;
     public static final int RECORD_SUBMITTED = 1;
     public static final int RECORD_GRADED = 2;
+    public static final int RECORD_PAUSED = 3;
 
     public static final int USER_STATUS_ENABLED = 1;
     public static final int USER_STATUS_DISABLED = 0;

@@ -1,7 +1,11 @@
 package com.exam.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.exam.dto.PauseExamDTO;
+import com.exam.dto.SaveAnswerDTO;
+import com.exam.dto.SaveAnswersDTO;
 import com.exam.dto.SubmitExamDTO;
+import com.exam.entity.ExamAnswer;
 import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
@@ -32,4 +36,16 @@ public interface ExamRecordService {
     byte[] exportCsv(Long examId) throws Exception;
 
     byte[] exportPdf(Long examId) throws Exception;
+
+    ExamRecordVO getCurrentExam(Long userId);
+
+    boolean saveAnswer(SaveAnswerDTO dto, Long userId);
+
+    boolean saveAnswers(SaveAnswersDTO dto, Long userId);
+
+    ExamRecordVO pauseExam(PauseExamDTO dto, Long userId);
+
+    ExamRecordVO resumeExam(PauseExamDTO dto, Long userId);
+
+    List<ExamAnswer> getRecordAnswers(Long recordId, Long userId);
 }

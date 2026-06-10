@@ -26,4 +26,15 @@ public class ExamRecord {
     private Integer status;
 
     private Integer duration;
+
+    private Integer pauseCount;
+
+    private Integer totalPauseTime;
+
+    private LocalDateTime lastPauseTime;
+
+    private LocalDateTime lastResumeTime;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 }

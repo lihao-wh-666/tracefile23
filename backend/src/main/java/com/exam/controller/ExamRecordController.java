@@ -2,15 +2,16 @@ package com.exam.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.exam.common.Result;
+import com.exam.dto.PauseExamDTO;
+import com.exam.dto.SaveAnswerDTO;
+import com.exam.dto.SaveAnswersDTO;
 import com.exam.dto.SubmitExamDTO;
 import com.exam.entity.ExamAnswer;
-import com.exam.mapper.ExamAnswerMapper;
 import com.exam.service.ExamRecordService;
 import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
 import com.exam.vo.WrongQuestionVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,9 +29,6 @@ public class ExamRecordController {
 
     @Autowired
     private ExamRecordService recordService;
-
-    @Autowired
-    private ExamAnswerMapper examAnswerMapper;
 
     @GetMapping("/page")
     @PreAuthorize("hasAnyRole('1', '2')")
@@ -51,9 +49,15 @@ public class ExamRecordController {
     @GetMapping("/{id}/answers")
     @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<List<ExamAnswer>> getRecordAnswers(@PathVariable Long id) {
-        List<ExamAnswer> answers = examAnswerMapper.selectList(
-                new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, id));
-        return Result.ok(answers);
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.getRecordAnswers(id, userId));
+    }
+
+    @GetMapping("/current")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<ExamRecordVO> getCurrentExam() {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.getCurrentExam(userId));
     }
 
     @PostMapping("/start/{examId}")
@@ -68,6 +72,34 @@ public class ExamRecordController {
     public Result<ExamRecordVO> submitExam(@RequestBody @Valid SubmitExamDTO dto) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         return Result.ok(recordService.submitExam(dto, userId));
+    }
+
+    @PostMapping("/save-answer")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<Boolean> saveAnswer(@RequestBody @Valid SaveAnswerDTO dto) {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.saveAnswer(dto, userId));
+    }
+
+    @PostMapping("/save-answers")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<Boolean> saveAnswers(@RequestBody @Valid SaveAnswersDTO dto) {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.saveAnswers(dto, userId));
+    }
+
+    @PostMapping("/pause")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<ExamRecordVO> pauseExam(@RequestBody @Valid PauseExamDTO dto) {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.pauseExam(dto, userId));
+    }
+
+    @PostMapping("/resume")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<ExamRecordVO> resumeExam(@RequestBody @Valid PauseExamDTO dto) {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.resumeExam(dto, userId));
     }
 
     @GetMapping("/stats/{examId}")

@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.common.Constants;
+import com.exam.dto.PauseExamDTO;
+import com.exam.dto.SaveAnswerDTO;
+import com.exam.dto.SaveAnswersDTO;
 import com.exam.dto.SubmitExamDTO;
 import com.exam.entity.*;
 import com.exam.mapper.*;
@@ -112,8 +115,15 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                         .eq(ExamRecord::getExamId, examId)
                         .eq(ExamRecord::getUserId, userId));
         if (existing != null) {
-            throw new RuntimeException("您已开始过该考试");
+            if (existing.getStatus() == Constants.RECORD_EXAMING || existing.getStatus() == Constants.RECORD_PAUSED) {
+                ExamRecordVO vo = buildRecordVO(existing);
+                fillBatchInfo(Collections.singletonList(vo));
+                return vo;
+            }
+            throw new RuntimeException("您已参加过该考试");
         }
+
+        Paper paper = paperMapper.selectById(exam.getPaperId());
 
         ExamRecord record = new ExamRecord();
         record.setExamId(examId);
@@ -121,6 +131,9 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         record.setPaperId(exam.getPaperId());
         record.setStartTime(now);
         record.setStatus(Constants.RECORD_EXAMING);
+        record.setPauseCount(0);
+        record.setTotalPauseTime(0);
+        record.setDuration(paper != null ? paper.getDuration() * 60 : 0);
         examRecordMapper.insert(record);
 
         List<PaperQuestion> paperQuestions = paperQuestionMapper.selectList(
@@ -149,12 +162,16 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 new LambdaQueryWrapper<ExamRecord>()
                         .eq(ExamRecord::getExamId, dto.getExamId())
                         .eq(ExamRecord::getUserId, userId)
-                        .eq(ExamRecord::getStatus, Constants.RECORD_EXAMING));
+                        .in(ExamRecord::getStatus, Constants.RECORD_EXAMING, Constants.RECORD_PAUSED));
         if (record == null) {
             throw new RuntimeException("考试记录不存在");
         }
 
-        record.setSubmitTime(LocalDateTime.now());
+        Exam exam = examMapper.selectById(record.getExamId());
+        LocalDateTime now = LocalDateTime.now();
+        boolean isTimeout = now.isAfter(exam.getEndTime());
+
+        record.setSubmitTime(now);
         record.setStatus(Constants.RECORD_SUBMITTED);
 
         List<ExamAnswer> answers = examAnswerMapper.selectList(
@@ -527,6 +544,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
             Exam exam = examMap.get(vo.getExamId());
             if (exam != null) {
                 vo.setExamName(exam.getName());
+                vo.setExamEndTime(exam.getEndTime());
             }
             User user = userMap.get(vo.getUserId());
             if (user != null) {
@@ -536,6 +554,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
             Paper paper = paperMap.get(vo.getPaperId());
             if (paper != null) {
                 vo.setTotalScore(paper.getTotalScore());
+                vo.setPaperDuration(paper.getDuration());
             }
         }
     }
@@ -643,9 +662,158 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 return "已提交";
             case Constants.RECORD_GRADED:
                 return "已阅卷";
+            case Constants.RECORD_PAUSED:
+                return "已暂停";
             default:
                 return "未知";
         }
+    }
+
+    @Override
+    public ExamRecordVO getCurrentExam(Long userId) {
+        ExamRecord record = examRecordMapper.selectOne(
+                new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getUserId, userId)
+                        .in(ExamRecord::getStatus, Constants.RECORD_EXAMING, Constants.RECORD_PAUSED)
+                        .orderByDesc(ExamRecord::getStartTime)
+                        .last("LIMIT 1"));
+        if (record == null) {
+            return null;
+        }
+        ExamRecordVO vo = buildRecordVO(record);
+        fillBatchInfo(Collections.singletonList(vo));
+        return vo;
+    }
+
+    @Override
+    public boolean saveAnswer(SaveAnswerDTO dto, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(dto.getRecordId());
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此考试记录");
+        }
+        if (record.getStatus() != Constants.RECORD_EXAMING && record.getStatus() != Constants.RECORD_PAUSED) {
+            throw new RuntimeException("考试已提交，无法修改答案");
+        }
+
+        ExamAnswer answer = examAnswerMapper.selectOne(
+                new LambdaQueryWrapper<ExamAnswer>()
+                        .eq(ExamAnswer::getRecordId, dto.getRecordId())
+                        .eq(ExamAnswer::getQuestionId, dto.getQuestionId()));
+        if (answer == null) {
+            throw new RuntimeException("答题记录不存在");
+        }
+        answer.setAnswer(dto.getAnswer() != null ? dto.getAnswer() : "");
+        examAnswerMapper.updateById(answer);
+        return true;
+    }
+
+    @Override
+    public boolean saveAnswers(SaveAnswersDTO dto, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(dto.getRecordId());
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此考试记录");
+        }
+        if (record.getStatus() != Constants.RECORD_EXAMING && record.getStatus() != Constants.RECORD_PAUSED) {
+            throw new RuntimeException("考试已提交，无法修改答案");
+        }
+
+        if (dto.getAnswers() != null && !dto.getAnswers().isEmpty()) {
+            List<ExamAnswer> existingAnswers = examAnswerMapper.selectList(
+                    new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, dto.getRecordId()));
+            Map<Long, ExamAnswer> answerMap = existingAnswers.stream()
+                    .collect(Collectors.toMap(ExamAnswer::getQuestionId, a -> a));
+
+            for (SaveAnswersDTO.SaveAnswerItem item : dto.getAnswers()) {
+                ExamAnswer answer = answerMap.get(item.getQuestionId());
+                if (answer != null) {
+                    answer.setAnswer(item.getAnswer() != null ? item.getAnswer() : "");
+                    examAnswerMapper.updateById(answer);
+                }
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public ExamRecordVO pauseExam(PauseExamDTO dto, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(dto.getRecordId());
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此考试记录");
+        }
+        if (record.getStatus() != Constants.RECORD_EXAMING) {
+            throw new RuntimeException("当前状态无法暂停考试");
+        }
+
+        Exam exam = examMapper.selectById(record.getExamId());
+        if (exam != null && LocalDateTime.now().isAfter(exam.getEndTime())) {
+            throw new RuntimeException("考试已结束，无法暂停");
+        }
+
+        record.setStatus(Constants.RECORD_PAUSED);
+        record.setLastPauseTime(LocalDateTime.now());
+        record.setPauseCount(record.getPauseCount() != null ? record.getPauseCount() + 1 : 1);
+        examRecordMapper.updateById(record);
+
+        ExamRecordVO vo = buildRecordVO(record);
+        fillBatchInfo(Collections.singletonList(vo));
+        return vo;
+    }
+
+    @Override
+    public ExamRecordVO resumeExam(PauseExamDTO dto, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(dto.getRecordId());
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此考试记录");
+        }
+        if (record.getStatus() != Constants.RECORD_PAUSED) {
+            throw new RuntimeException("当前状态无法恢复考试");
+        }
+
+        Exam exam = examMapper.selectById(record.getExamId());
+        if (exam != null && LocalDateTime.now().isAfter(exam.getEndTime())) {
+            throw new RuntimeException("考试已结束，无法恢复");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (record.getLastPauseTime() != null) {
+            long pauseSeconds = java.time.Duration.between(record.getLastPauseTime(), now).getSeconds();
+            record.setTotalPauseTime(record.getTotalPauseTime() != null
+                    ? record.getTotalPauseTime() + (int) pauseSeconds
+                    : (int) pauseSeconds);
+        }
+
+        record.setStatus(Constants.RECORD_EXAMING);
+        record.setLastResumeTime(now);
+        examRecordMapper.updateById(record);
+
+        ExamRecordVO vo = buildRecordVO(record);
+        fillBatchInfo(Collections.singletonList(vo));
+        return vo;
+    }
+
+    @Override
+    public List<ExamAnswer> getRecordAnswers(Long recordId, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权查看此考试记录");
+        }
+        return examAnswerMapper.selectList(
+                new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, recordId));
     }
 
     @Override

@@ -8,12 +8,32 @@ export function getRecordDetail(id) {
   return request.get(`/record/${id}`)
 }
 
+export function getCurrentExam() {
+  return request.get('/record/current')
+}
+
 export function startExam(examId) {
   return request.post(`/record/start/${examId}`)
 }
 
 export function submitExam(data) {
   return request.post('/record/submit', data)
+}
+
+export function saveAnswer(data) {
+  return request.post('/record/save-answer', data)
+}
+
+export function saveAnswers(data) {
+  return request.post('/record/save-answers', data)
+}
+
+export function pauseExam(data) {
+  return request.post('/record/pause', data)
+}
+
+export function resumeExam(data) {
+  return request.post('/record/resume', data)
 }
 
 export function getScoreStats(examId) {

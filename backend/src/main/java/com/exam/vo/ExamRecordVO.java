@@ -34,4 +34,16 @@ public class ExamRecordVO {
     private Integer duration;
 
     private Integer rank;
+
+    private Integer pauseCount;
+
+    private Integer totalPauseTime;
+
+    private LocalDateTime lastPauseTime;
+
+    private LocalDateTime lastResumeTime;
+
+    private LocalDateTime examEndTime;
+
+    private Integer paperDuration;
 }

@@ -1,15 +1,37 @@
 <template>
   <div v-loading="loading" class="exam-take">
+    <div v-if="isPaused" class="pause-overlay">
+      <div class="pause-content">
+        <el-icon class="pause-icon"><VideoPause /></el-icon>
+        <h3>考试已暂停</h3>
+        <p>点击下方按钮继续答题</p>
+        <el-button type="primary" size="large" @click="handleResume">
+          <el-icon><VideoPlay /></el-icon>
+          继续答题
+        </el-button>
+      </div>
+    </div>
+
     <div class="exam-header">
       <div class="header-left">
         <h3>{{ examInfo.name }}</h3>
         <span class="student-info">考生：{{ userStore.userInfo?.realName || userStore.userInfo?.username || '' }}</span>
       </div>
       <div class="header-right">
+        <span class="save-status" :class="saveStatusClass">
+          <el-icon v-if="saveStatus === 'saving'"><Loading /></el-icon>
+          <el-icon v-else-if="saveStatus === 'saved'"><CircleCheckFilled /></el-icon>
+          <el-icon v-else><WarningFilled /></el-icon>
+          {{ saveStatusText }}
+        </span>
         <span class="timer" :class="{ 'timer-warning': remainingMs < 300000 }">
           <el-icon><Clock /></el-icon>
           {{ formatTime(remainingMs) }}
         </span>
+        <el-button v-if="!isPaused" type="warning" @click="handlePause">
+          <el-icon><VideoPause /></el-icon>
+          暂停
+        </el-button>
       </div>
     </div>
 
@@ -54,7 +76,7 @@
 
         <div class="question-options">
           <template v-if="currentQuestion.type === 1">
-            <el-radio-group v-model="answers[currentQuestion.id]" class="options-group">
+            <el-radio-group v-model="answers[currentQuestion.id]" class="options-group" @change="handleAnswerChange(currentQuestion.id)">
               <el-radio v-for="opt in getOptions(currentQuestion)" :key="opt.key" :value="opt.key" class="option-item">
                 <span class="option-key">{{ opt.key }}</span>
                 <span class="option-text">{{ opt.text }}</span>
@@ -63,7 +85,7 @@
           </template>
 
           <template v-else-if="currentQuestion.type === 2">
-            <el-checkbox-group v-model="answers[currentQuestion.id]" class="options-group">
+            <el-checkbox-group v-model="answers[currentQuestion.id]" class="options-group" @change="handleAnswerChange(currentQuestion.id)">
               <el-checkbox v-for="opt in getOptions(currentQuestion)" :key="opt.key" :value="opt.key" class="option-item">
                 <span class="option-key">{{ opt.key }}</span>
                 <span class="option-text">{{ opt.text }}</span>
@@ -72,7 +94,7 @@
           </template>
 
           <template v-else-if="currentQuestion.type === 3">
-            <el-radio-group v-model="answers[currentQuestion.id]" class="options-group judge-group">
+            <el-radio-group v-model="answers[currentQuestion.id]" class="options-group judge-group" @change="handleAnswerChange(currentQuestion.id)">
               <el-radio value="对" class="option-item judge-item">对</el-radio>
               <el-radio value="错" class="option-item judge-item">错</el-radio>
             </el-radio-group>
@@ -84,6 +106,7 @@
               placeholder="请输入答案"
               size="large"
               class="text-input"
+              @blur="handleAnswerChange(currentQuestion.id)"
             />
           </template>
 
@@ -94,6 +117,7 @@
               :rows="6"
               placeholder="请输入答案"
               class="textarea-input"
+              @blur="handleAnswerChange(currentQuestion.id)"
             />
           </template>
         </div>
@@ -118,11 +142,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, List, ArrowLeft, ArrowRight, Check } from '@element-plus/icons-vue'
-import { startExam, submitExam } from '../../api/record'
+import {
+  Clock, List, ArrowLeft, ArrowRight, Check, VideoPause, VideoPlay,
+  Loading, CircleCheckFilled, WarningFilled
+} from '@element-plus/icons-vue'
+import {
+  startExam, submitExam, saveAnswer, saveAnswers,
+  pauseExam, resumeExam, getCurrentExam, getRecordAnswers
+} from '../../api/record'
 import { getExamDetail } from '../../api/exam'
 import { getPaperDetail } from '../../api/paper'
 import { useUserStore } from '../../store/user'
@@ -139,13 +169,36 @@ const answers = reactive({})
 const remainingMs = ref(0)
 const sidebarOpen = ref(false)
 const examInfo = reactive({ name: '', endTime: '' })
+const recordInfo = reactive({ id: null, status: 0, totalPauseTime: 0 })
+const isPaused = ref(false)
+const saveStatus = ref('saved')
+const submitted = ref(false)
+
 let timerHandle = null
-let submitted = false
+let autoSaveHandle = null
+let debounceTimer = null
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 
 const answeredCount = computed(() => {
   return questions.value.filter(q => isAnswered(q.id)).length
+})
+
+const saveStatusClass = computed(() => {
+  return {
+    'status-saving': saveStatus.value === 'saving',
+    'status-saved': saveStatus.value === 'saved',
+    'status-error': saveStatus.value === 'error'
+  }
+})
+
+const saveStatusText = computed(() => {
+  const map = {
+    saving: '保存中...',
+    saved: '已保存',
+    error: '保存失败'
+  }
+  return map[saveStatus.value] || ''
 })
 
 const typeLabel = (type) => {
@@ -176,11 +229,12 @@ const formatTime = (ms) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-const startTimer = (endTime) => {
-  const end = new Date(endTime).getTime()
+const startTimer = (endTimeStr, pauseTimeMs = 0) => {
+  const end = new Date(endTimeStr).getTime() + pauseTimeMs
   const tick = () => {
+    if (isPaused.value) return
     remainingMs.value = Math.max(0, end - Date.now())
-    if (remainingMs.value <= 0 && !submitted) {
+    if (remainingMs.value <= 0 && !submitted.value) {
       clearInterval(timerHandle)
       doSubmit(true)
     }
@@ -192,9 +246,23 @@ const startTimer = (endTime) => {
 const initAnswers = (list) => {
   list.forEach(q => {
     if (q.type === 2) {
-      answers[q.id] = []
+      if (!answers[q.id]) answers[q.id] = []
     } else {
-      answers[q.id] = ''
+      if (!answers[q.id]) answers[q.id] = ''
+    }
+  })
+}
+
+const restoreAnswers = (savedAnswers) => {
+  if (!savedAnswers || savedAnswers.length === 0) return
+  savedAnswers.forEach(item => {
+    const q = questions.value.find(q => q.id === item.questionId)
+    if (q) {
+      if (q.type === 2 && item.answer) {
+        answers[item.questionId] = item.answer.split('')
+      } else {
+        answers[item.questionId] = item.answer || ''
+      }
     }
   })
 }
@@ -210,10 +278,22 @@ const buildSubmitData = () => {
   return { examId, answers: answerList }
 }
 
+const buildSaveAllData = () => {
+  const answerList = questions.value.map(q => {
+    let ans = answers[q.id]
+    if (Array.isArray(ans)) {
+      ans = [...ans].sort().join('')
+    }
+    return { questionId: q.id, answer: ans || '' }
+  })
+  return { recordId: recordInfo.id, answers: answerList }
+}
+
 const doSubmit = async (auto) => {
-  if (submitted) return
-  submitted = true
+  if (submitted.value) return
+  submitted.value = true
   if (timerHandle) clearInterval(timerHandle)
+  if (autoSaveHandle) clearInterval(autoSaveHandle)
   try {
     const data = buildSubmitData()
     const res = await submitExam(data)
@@ -230,7 +310,7 @@ const doSubmit = async (auto) => {
       router.push('/personal-score')
     }
   } catch {
-    submitted = false
+    submitted.value = false
   }
 }
 
@@ -241,6 +321,91 @@ const handleSubmit = async () => {
     : '确定要交卷吗？'
   await ElMessageBox.confirm(msg, '交卷确认', { type: 'warning' })
   await doSubmit(false)
+}
+
+const handleAnswerChange = async (questionId) => {
+  if (isPaused.value || submitted.value) return
+
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(async () => {
+    await doSaveSingleAnswer(questionId)
+  }, 800)
+}
+
+const doSaveSingleAnswer = async (questionId) => {
+  if (!recordInfo.id) return
+  saveStatus.value = 'saving'
+  try {
+    let ans = answers[questionId]
+    if (Array.isArray(ans)) {
+      ans = [...ans].sort().join('')
+    }
+    await saveAnswer({
+      recordId: recordInfo.id,
+      questionId,
+      answer: ans || ''
+    })
+    saveStatus.value = 'saved'
+  } catch {
+    saveStatus.value = 'error'
+  }
+}
+
+const doSaveAllAnswers = async () => {
+  if (!recordInfo.id || isPaused.value || submitted.value) return
+  saveStatus.value = 'saving'
+  try {
+    await saveAnswers(buildSaveAllData())
+    saveStatus.value = 'saved'
+  } catch {
+    saveStatus.value = 'error'
+  }
+}
+
+const startAutoSave = () => {
+  if (autoSaveHandle) clearInterval(autoSaveHandle)
+  autoSaveHandle = setInterval(() => {
+    if (!isPaused.value && !submitted.value) {
+      doSaveAllAnswers()
+    }
+  }, 30000)
+}
+
+const handlePause = async () => {
+  if (!recordInfo.id) return
+  try {
+    await ElMessageBox.confirm(
+      '暂停后考试计时器将停止，确定要暂停吗？',
+      '暂停确认',
+      { type: 'warning' }
+    )
+    await doSaveAllAnswers()
+    const res = await pauseExam({ recordId: recordInfo.id })
+    Object.assign(recordInfo, res.data)
+    isPaused.value = true
+    ElMessage.success('考试已暂停')
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err.response?.data?.message || '暂停失败')
+    }
+  }
+}
+
+const handleResume = async () => {
+  if (!recordInfo.id) return
+  try {
+    const res = await resumeExam({ recordId: recordInfo.id })
+    Object.assign(recordInfo, res.data)
+    isPaused.value = false
+    const pauseTimeMs = (recordInfo.totalPauseTime || 0) * 1000
+    if (examInfo.endTime) {
+      if (timerHandle) clearInterval(timerHandle)
+      startTimer(examInfo.endTime, pauseTimeMs)
+    }
+    ElMessage.success('已恢复答题')
+  } catch (err) {
+    ElMessage.error(err.response?.data?.message || '恢复失败')
+  }
 }
 
 const selectQuestion = (idx) => {
@@ -266,19 +431,47 @@ const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
 
+const handleBeforeUnload = (e) => {
+  if (!submitted.value) {
+    doSaveAllAnswers()
+    e.preventDefault()
+    e.returnValue = '您有未提交的答题，确定要离开吗？进度已自动保存。'
+  }
+}
+
 const init = async () => {
   try {
-    const recordRes = await startExam(examId)
-    const record = recordRes.data
+    let recordRes
+    let record
 
-    const examRes = await getExamDetail(examId)
+    const currentRes = await getCurrentExam()
+    if (currentRes.data && currentRes.data.examId === examId) {
+      record = currentRes.data
+    } else {
+      recordRes = await startExam(examId)
+      record = recordRes.data
+    }
+
+    Object.assign(recordInfo, record)
+    isPaused.value = record.status === 3
+
+    const examRes = await getExamDetail(record.examId || examId)
     Object.assign(examInfo, examRes.data)
 
     const paperRes = await getPaperDetail(record.paperId)
     questions.value = paperRes.data.questions || []
     initAnswers(questions.value)
 
-    startTimer(examInfo.endTime)
+    try {
+      const answersRes = await getRecordAnswers(record.id)
+      restoreAnswers(answersRes.data)
+    } catch {}
+
+    const pauseTimeMs = (record.totalPauseTime || 0) * 1000
+    startTimer(examInfo.endTime, pauseTimeMs)
+    startAutoSave()
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
   } catch (err) {
     ElMessage.error(err.response?.data?.message || '加载考试失败')
     router.push('/exam')
@@ -291,6 +484,12 @@ onMounted(init)
 
 onBeforeUnmount(() => {
   if (timerHandle) clearInterval(timerHandle)
+  if (autoSaveHandle) clearInterval(autoSaveHandle)
+  if (debounceTimer) clearTimeout(debounceTimer)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+  if (!submitted.value) {
+    doSaveAllAnswers()
+  }
 })
 </script>
 
@@ -300,6 +499,45 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 120px);
+  position: relative;
+}
+
+.pause-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pause-content {
+  background: #fff;
+  padding: 48px 64px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.pause-icon {
+  font-size: 64px;
+  color: #e6a23c;
+  margin-bottom: 16px;
+}
+
+.pause-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #303133;
+}
+
+.pause-content p {
+  margin: 0 0 24px 0;
+  color: #909399;
 }
 
 .exam-header {
@@ -324,6 +562,35 @@ onBeforeUnmount(() => {
 .student-info {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.save-status.status-saving {
+  color: #a0cfff;
+}
+
+.save-status.status-saved {
+  color: #67c23a;
+}
+
+.save-status.status-error {
+  color: #f56c6c;
 }
 
 .timer {
@@ -603,6 +870,15 @@ onBeforeUnmount(() => {
     font-size: 16px;
   }
 
+  .header-right {
+    gap: 8px;
+  }
+
+  .save-status {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
   .timer {
     font-size: 18px;
     padding: 6px 12px;
@@ -689,6 +965,11 @@ onBeforeUnmount(() => {
 
   .header-right {
     align-self: flex-end;
+  }
+
+  .pause-content {
+    padding: 32px 24px;
+    margin: 0 16px;
   }
 
   .question-grid {
