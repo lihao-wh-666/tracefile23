@@ -48,4 +48,12 @@ public interface ExamRecordService {
     ExamRecordVO resumeExam(PauseExamDTO dto, Long userId);
 
     List<ExamAnswer> getRecordAnswers(Long recordId, Long userId);
+
+    byte[] exportMyRecordsExcel(Long userId) throws Exception;
+
+    byte[] exportMyRecordsCsv(Long userId) throws Exception;
+
+    byte[] exportMyWrongQuestionsExcel(Long userId) throws Exception;
+
+    byte[] exportMyWrongQuestionsCsv(Long userId) throws Exception;
 }

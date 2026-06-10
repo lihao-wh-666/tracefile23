@@ -73,3 +73,19 @@ export function exportPdf(examId) {
   if (examId) params.examId = examId
   return request.get('/record/export/pdf', { params, responseType: 'blob' })
 }
+
+export function exportMyRecordsExcel() {
+  return request.get('/record/my/export/records/excel', { responseType: 'blob' })
+}
+
+export function exportMyRecordsCsv() {
+  return request.get('/record/my/export/records/csv', { responseType: 'blob' })
+}
+
+export function exportMyWrongQuestionsExcel() {
+  return request.get('/record/my/export/wrong-questions/excel', { responseType: 'blob' })
+}
+
+export function exportMyWrongQuestionsCsv() {
+  return request.get('/record/my/export/wrong-questions/csv', { responseType: 'blob' })
+}

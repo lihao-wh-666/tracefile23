@@ -816,6 +816,236 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, recordId));
     }
 
+    private List<ExamRecordVO> getMyRecordsForExport(Long userId) {
+        LambdaQueryWrapper<ExamRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ExamRecord::getUserId, userId);
+        wrapper.in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED);
+        wrapper.orderByDesc(ExamRecord::getSubmitTime);
+        List<ExamRecord> records = examRecordMapper.selectList(wrapper);
+
+        List<ExamRecordVO> voList = records.stream()
+                .map(this::buildRecordVO)
+                .collect(Collectors.toList());
+        fillBatchInfo(voList);
+        fillRankingInfo(voList);
+        return voList;
+    }
+
+    private List<WrongQuestionVO> getMyWrongQuestionsForExport(Long userId) {
+        List<ExamRecord> records = examRecordMapper.selectList(
+                new LambdaQueryWrapper<ExamRecord>()
+                        .eq(ExamRecord::getUserId, userId)
+                        .in(ExamRecord::getStatus, Constants.RECORD_SUBMITTED, Constants.RECORD_GRADED));
+
+        if (records.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> recordIds = records.stream().map(ExamRecord::getId).collect(Collectors.toList());
+        Map<Long, ExamRecord> recordMap = records.stream().collect(Collectors.toMap(ExamRecord::getId, r -> r));
+
+        List<ExamAnswer> wrongAnswers = examAnswerMapper.selectList(
+                new LambdaQueryWrapper<ExamAnswer>()
+                        .in(ExamAnswer::getRecordId, recordIds)
+                        .eq(ExamAnswer::getIsCorrect, 0));
+
+        List<Long> questionIds = wrongAnswers.stream().map(ExamAnswer::getQuestionId).distinct().collect(Collectors.toList());
+        Map<Long, Question> questionMap = new HashMap<>();
+        if (!questionIds.isEmpty()) {
+            questionMapper.selectBatchIds(questionIds).forEach(q -> questionMap.put(q.getId(), q));
+        }
+
+        List<Long> examIds = records.stream().map(ExamRecord::getExamId).distinct().collect(Collectors.toList());
+        Map<Long, Exam> examMap = new HashMap<>();
+        if (!examIds.isEmpty()) {
+            examMapper.selectBatchIds(examIds).forEach(e -> examMap.put(e.getId(), e));
+        }
+
+        List<WrongQuestionVO> voList = new ArrayList<>();
+        for (ExamAnswer answer : wrongAnswers) {
+            Question question = questionMap.get(answer.getQuestionId());
+            ExamRecord record = recordMap.get(answer.getRecordId());
+            if (question == null || record == null) {
+                continue;
+            }
+
+            WrongQuestionVO vo = new WrongQuestionVO();
+            vo.setQuestionId(question.getId());
+            vo.setExamId(record.getExamId());
+            Exam exam = examMap.get(record.getExamId());
+            if (exam != null) {
+                vo.setExamName(exam.getName());
+            }
+            vo.setRecordId(record.getId());
+            vo.setType(question.getType());
+            vo.setContent(question.getContent());
+            vo.setOptionA(question.getOptionA());
+            vo.setOptionB(question.getOptionB());
+            vo.setOptionC(question.getOptionC());
+            vo.setOptionD(question.getOptionD());
+            vo.setUserAnswer(answer.getAnswer());
+            vo.setCorrectAnswer(question.getAnswer());
+            vo.setScore(answer.getScore());
+            vo.setTotalScore(question.getScore());
+            vo.setAnalysis(question.getAnalysis());
+            vo.setSubmitTime(record.getSubmitTime());
+            voList.add(vo);
+        }
+        return voList;
+    }
+
+    @Override
+    public byte[] exportMyRecordsExcel(Long userId) throws Exception {
+        List<ExamRecordVO> records = getMyRecordsForExport(userId);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("我的考试成绩");
+
+        CellStyle headerStyle = workbook.createCellStyle();
+        org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        String[] headers = {"序号", "考试名称", "得分", "总分", "排名", "状态", "提交时间", "用时(分钟)"};
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        int rowNum = 1;
+        for (ExamRecordVO record : records) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(rowNum - 1);
+            row.createCell(1).setCellValue(record.getExamName() != null ? record.getExamName() : "");
+            row.createCell(2).setCellValue(record.getScore() != null ? record.getScore() : 0);
+            row.createCell(3).setCellValue(record.getTotalScore() != null ? record.getTotalScore() : 0);
+            row.createCell(4).setCellValue(record.getRank() != null ? "第" + record.getRank() + "名" : "-");
+            row.createCell(5).setCellValue(getStatusText(record.getStatus()));
+            row.createCell(6).setCellValue(record.getSubmitTime() != null ? record.getSubmitTime().toString() : "");
+            row.createCell(7).setCellValue(record.getDuration() != null ? record.getDuration() / 60 : 0);
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        workbook.write(outputStream);
+        workbook.close();
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] exportMyRecordsCsv(Long userId) throws Exception {
+        List<ExamRecordVO> records = getMyRecordsForExport(userId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("序号,考试名称,得分,总分,排名,状态,提交时间,用时(分钟)\n");
+
+        int rowNum = 1;
+        for (ExamRecordVO record : records) {
+            sb.append(rowNum++).append(",");
+            sb.append(escapeCsv(record.getExamName())).append(",");
+            sb.append(record.getScore() != null ? record.getScore() : 0).append(",");
+            sb.append(record.getTotalScore() != null ? record.getTotalScore() : 0).append(",");
+            sb.append(escapeCsv(record.getRank() != null ? "第" + record.getRank() + "名" : "-")).append(",");
+            sb.append(escapeCsv(getStatusText(record.getStatus()))).append(",");
+            sb.append(record.getSubmitTime() != null ? record.getSubmitTime().toString() : "").append(",");
+            sb.append(record.getDuration() != null ? record.getDuration() / 60 : 0).append("\n");
+        }
+
+        return sb.toString().getBytes("UTF-8");
+    }
+
+    @Override
+    public byte[] exportMyWrongQuestionsExcel(Long userId) throws Exception {
+        List<WrongQuestionVO> wrongList = getMyWrongQuestionsForExport(userId);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("我的错题明细");
+
+        CellStyle headerStyle = workbook.createCellStyle();
+        org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+        String[] headers = {"序号", "来源考试", "题型", "题目内容", "你的答案", "正确答案", "得分", "总分", "做错时间"};
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        int rowNum = 1;
+        for (WrongQuestionVO item : wrongList) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(rowNum - 1);
+            row.createCell(1).setCellValue(item.getExamName() != null ? item.getExamName() : "");
+            row.createCell(2).setCellValue(getQuestionTypeText(item.getType()));
+            row.createCell(3).setCellValue(item.getContent() != null ? item.getContent() : "");
+            row.createCell(4).setCellValue(item.getUserAnswer() != null ? item.getUserAnswer() : "-");
+            row.createCell(5).setCellValue(item.getCorrectAnswer() != null ? item.getCorrectAnswer() : "-");
+            row.createCell(6).setCellValue(item.getScore() != null ? item.getScore() : 0);
+            row.createCell(7).setCellValue(item.getTotalScore() != null ? item.getTotalScore() : 0);
+            row.createCell(8).setCellValue(item.getSubmitTime() != null ? item.getSubmitTime().toString() : "");
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+        workbook.write(outputStream);
+        workbook.close();
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] exportMyWrongQuestionsCsv(Long userId) throws Exception {
+        List<WrongQuestionVO> wrongList = getMyWrongQuestionsForExport(userId);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("序号,来源考试,题型,题目内容,你的答案,正确答案,得分,总分,做错时间\n");
+
+        int rowNum = 1;
+        for (WrongQuestionVO item : wrongList) {
+            sb.append(rowNum++).append(",");
+            sb.append(escapeCsv(item.getExamName())).append(",");
+            sb.append(escapeCsv(getQuestionTypeText(item.getType()))).append(",");
+            sb.append(escapeCsv(item.getContent())).append(",");
+            sb.append(escapeCsv(item.getUserAnswer() != null ? item.getUserAnswer() : "-")).append(",");
+            sb.append(escapeCsv(item.getCorrectAnswer() != null ? item.getCorrectAnswer() : "-")).append(",");
+            sb.append(item.getScore() != null ? item.getScore() : 0).append(",");
+            sb.append(item.getTotalScore() != null ? item.getTotalScore() : 0).append(",");
+            sb.append(item.getSubmitTime() != null ? item.getSubmitTime().toString() : "").append("\n");
+        }
+
+        return sb.toString().getBytes("UTF-8");
+    }
+
+    private String getQuestionTypeText(Integer type) {
+        if (type == null) return "未知";
+        switch (type) {
+            case Constants.TYPE_SINGLE:
+                return "单选题";
+            case Constants.TYPE_MULTI:
+                return "多选题";
+            case Constants.TYPE_JUDGE:
+                return "判断题";
+            case Constants.TYPE_FILL:
+                return "填空题";
+            case Constants.TYPE_ESSAY:
+                return "问答题";
+            default:
+                return "未知";
+        }
+    }
+
     @Override
     public byte[] exportPdf(Long examId) throws Exception {
         List<ExamRecordVO> records = getRecordsForExport(examId);

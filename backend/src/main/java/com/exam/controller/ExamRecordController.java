@@ -173,4 +173,66 @@ public class ExamRecordController {
         out.flush();
         out.close();
     }
+
+    @GetMapping("/my/export/records/excel")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public void exportMyRecordsExcel(HttpServletResponse response) throws Exception {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        byte[] data = recordService.exportMyRecordsExcel(userId);
+        String fileName = "我的考试成绩_" + System.currentTimeMillis() + ".xlsx";
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        response.setContentLength(data.length);
+        OutputStream out = response.getOutputStream();
+        out.write(data);
+        out.flush();
+        out.close();
+    }
+
+    @GetMapping("/my/export/records/csv")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public void exportMyRecordsCsv(HttpServletResponse response) throws Exception {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        byte[] data = recordService.exportMyRecordsCsv(userId);
+        String fileName = "我的考试成绩_" + System.currentTimeMillis() + ".csv";
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        response.setContentLength(data.length);
+        OutputStream out = response.getOutputStream();
+        out.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
+        out.write(data);
+        out.flush();
+        out.close();
+    }
+
+    @GetMapping("/my/export/wrong-questions/excel")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public void exportMyWrongQuestionsExcel(HttpServletResponse response) throws Exception {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        byte[] data = recordService.exportMyWrongQuestionsExcel(userId);
+        String fileName = "我的错题明细_" + System.currentTimeMillis() + ".xlsx";
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        response.setContentLength(data.length);
+        OutputStream out = response.getOutputStream();
+        out.write(data);
+        out.flush();
+        out.close();
+    }
+
+    @GetMapping("/my/export/wrong-questions/csv")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public void exportMyWrongQuestionsCsv(HttpServletResponse response) throws Exception {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        byte[] data = recordService.exportMyWrongQuestionsCsv(userId);
+        String fileName = "我的错题明细_" + System.currentTimeMillis() + ".csv";
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        response.setContentLength(data.length);
+        OutputStream out = response.getOutputStream();
+        out.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
+        out.write(data);
+        out.flush();
+        out.close();
+    }
 }

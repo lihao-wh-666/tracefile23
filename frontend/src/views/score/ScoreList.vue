@@ -332,24 +332,39 @@ const downloadFile = (blob, fileName) => {
   window.URL.revokeObjectURL(url)
 }
 
+const getFilenameFromHeader = (response) => {
+  const disposition = response.headers['content-disposition']
+  if (disposition) {
+    const matches = disposition.match(/filename="?([^"]+)"?/)
+    if (matches && matches[1]) {
+      return decodeURIComponent(matches[1])
+    }
+  }
+  return null
+}
+
 const handleExport = async (type) => {
   try {
     let data
     let fileName
     const examId = filterExamId.value
 
+    let response
     switch (type) {
       case 'excel':
-        data = await exportExcel(examId)
-        fileName = `成绩统计_${Date.now()}.xlsx`
+        response = await exportExcel(examId)
+        data = response.data
+        fileName = getFilenameFromHeader(response) || `成绩统计_${Date.now()}.xlsx`
         break
       case 'csv':
-        data = await exportCsv(examId)
-        fileName = `成绩统计_${Date.now()}.csv`
+        response = await exportCsv(examId)
+        data = response.data
+        fileName = getFilenameFromHeader(response) || `成绩统计_${Date.now()}.csv`
         break
       case 'pdf':
-        data = await exportPdf(examId)
-        fileName = `成绩统计_${Date.now()}.pdf`
+        response = await exportPdf(examId)
+        data = response.data
+        fileName = getFilenameFromHeader(response) || `成绩统计_${Date.now()}.pdf`
         break
       default:
         return

@@ -51,6 +51,20 @@
     <el-card shadow="hover" class="tab-card">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="考试记录" name="records">
+          <div class="toolbar">
+            <el-dropdown @command="handleExportRecords">
+              <el-button type="primary" :icon="Download">
+                导出成绩
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+                  <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
           <div class="responsive-table mobile-hidden">
             <el-table :data="recordList" border stripe style="width: 100%">
               <el-table-column type="index" label="序号" width="60" align="center" />
@@ -131,6 +145,20 @@
         </el-tab-pane>
 
         <el-tab-pane label="错题明细" name="wrong">
+          <div class="toolbar">
+            <el-dropdown @command="handleExportWrong">
+              <el-button type="primary" :icon="Download">
+                导出错题
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+                  <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
           <div class="responsive-table mobile-hidden">
             <el-table :data="wrongList" border stripe style="width: 100%">
               <el-table-column type="index" label="序号" width="60" align="center" />
@@ -195,8 +223,9 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Trophy, Histogram, CircleCheck, Warning } from '@element-plus/icons-vue'
-import { getMyStat, getMyRecordList, getMyWrongQuestions } from '../../api/record'
+import { Trophy, Histogram, CircleCheck, Warning, Download, ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getMyStat, getMyRecordList, getMyWrongQuestions, exportMyRecordsExcel, exportMyRecordsCsv, exportMyWrongQuestionsExcel, exportMyWrongQuestionsCsv } from '../../api/record'
 
 const activeTab = ref('records')
 const personalStat = ref({})
@@ -302,6 +331,66 @@ const handleTabChange = (tab) => {
     if (wrongList.value.length === 0) {
       loadWrongQuestions()
     }
+  }
+}
+
+const downloadFile = (blob, filename) => {
+  const url = window.URL.createObjectURL(new Blob([blob]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+const getFilenameFromHeader = (response) => {
+  const disposition = response.headers['content-disposition']
+  if (disposition) {
+    const matches = disposition.match(/filename="?([^"]+)"?/)
+    if (matches && matches[1]) {
+      return decodeURIComponent(matches[1])
+    }
+  }
+  return null
+}
+
+const handleExportRecords = async (type) => {
+  try {
+    let response
+    let filename
+    if (type === 'excel') {
+      response = await exportMyRecordsExcel()
+      filename = getFilenameFromHeader(response) || '我的考试成绩.xlsx'
+    } else {
+      response = await exportMyRecordsCsv()
+      filename = getFilenameFromHeader(response) || '我的考试成绩.csv'
+    }
+    downloadFile(response.data, filename)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    console.error('导出失败', e)
+    ElMessage.error('导出失败，请重试')
+  }
+}
+
+const handleExportWrong = async (type) => {
+  try {
+    let response
+    let filename
+    if (type === 'excel') {
+      response = await exportMyWrongQuestionsExcel()
+      filename = getFilenameFromHeader(response) || '我的错题明细.xlsx'
+    } else {
+      response = await exportMyWrongQuestionsCsv()
+      filename = getFilenameFromHeader(response) || '我的错题明细.csv'
+    }
+    downloadFile(response.data, filename)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    console.error('导出失败', e)
+    ElMessage.error('导出失败，请重试')
   }
 }
 
@@ -418,6 +507,12 @@ onMounted(() => {
 
 .tab-card {
   border-radius: 8px;
+}
+
+.toolbar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .pagination-wrap {

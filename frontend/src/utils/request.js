@@ -63,7 +63,7 @@ request.interceptors.response.use(
     })
 
     if (response.config.responseType === 'blob') {
-      return response.data
+      return response
     }
     const res = response.data
     if (res.code !== ERROR_CODE.SUCCESS) {
