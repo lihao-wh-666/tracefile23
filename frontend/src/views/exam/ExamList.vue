@@ -46,7 +46,7 @@
           </el-table-column>
           <el-table-column label="操作" width="220" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.status === 1" type="primary" size="small" link @click="handleTake(row)">参加</el-button>
+              <el-button v-if="canTakeExam(row)" type="primary" size="small" link @click="handleTake(row)">参加</el-button>
               <el-button size="small" link @click="handleView(row)">查看</el-button>
               <template v-if="isAdminOrTeacher">
                 <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
@@ -88,7 +88,7 @@
           <span class="info-value">{{ item.endTime }}</span>
         </div>
         <div class="item-actions">
-          <el-button v-if="item.status === 1" type="primary" size="small" @click="handleTake(item)">参加</el-button>
+          <el-button v-if="canTakeExam(item)" type="primary" size="small" @click="handleTake(item)">参加</el-button>
           <el-button size="small" @click="handleView(item)">查看</el-button>
           <template v-if="isAdminOrTeacher">
             <el-button type="warning" size="small" @click="handleEdit(item)">编辑</el-button>
@@ -208,6 +208,17 @@ const statusText = (status) => {
 const statusTagType = (status) => {
   const map = { 0: 'info', 1: 'success', 2: 'danger' }
   return map[status] ?? 'info'
+}
+
+const canTakeExam = (row) => {
+  if (row.status === 1) return true
+  if (row.startTime && row.endTime) {
+    const now = new Date().getTime()
+    const start = new Date(row.startTime.replace(/-/g, '/')).getTime()
+    const end = new Date(row.endTime.replace(/-/g, '/')).getTime()
+    return now >= start && now <= end
+  }
+  return false
 }
 
 const loadData = async () => {

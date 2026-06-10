@@ -15,6 +15,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,21 +30,48 @@ public class ExamServiceImpl implements ExamService {
     @Autowired
     private PaperMapper paperMapper;
 
+    private int computeStatus(Exam exam) {
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(exam.getStartTime())) {
+            return Constants.EXAM_NOT_START;
+        } else if (now.isAfter(exam.getEndTime())) {
+            return Constants.EXAM_END;
+        } else {
+            return Constants.EXAM_ING;
+        }
+    }
+
+    private int computeStatus(LocalDateTime startTime, LocalDateTime endTime) {
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(startTime)) {
+            return Constants.EXAM_NOT_START;
+        } else if (now.isAfter(endTime)) {
+            return Constants.EXAM_END;
+        } else {
+            return Constants.EXAM_ING;
+        }
+    }
+
     @Override
     public IPage<ExamVO> page(Integer current, Integer size, Integer status) {
         Page<Exam> page = new Page<>(current, size);
         LambdaQueryWrapper<Exam> wrapper = new LambdaQueryWrapper<>();
-        if (status != null) {
-            wrapper.eq(Exam::getStatus, status);
-        }
         wrapper.orderByDesc(Exam::getCreateTime);
         IPage<Exam> examPage = examMapper.selectPage(page, wrapper);
 
         IPage<ExamVO> voPage = examPage.convert(e -> {
             ExamVO vo = new ExamVO();
             BeanUtils.copyProperties(e, vo);
+            vo.setStatus(computeStatus(e));
             return vo;
         });
+
+        if (status != null) {
+            voPage.setRecords(voPage.getRecords().stream()
+                    .filter(vo -> vo.getStatus() != null && vo.getStatus().equals(status))
+                    .collect(Collectors.toList()));
+            voPage.setTotal(voPage.getRecords().size());
+        }
 
         List<Long> paperIds = voPage.getRecords().stream()
                 .map(ExamVO::getPaperId)
@@ -68,6 +96,7 @@ public class ExamServiceImpl implements ExamService {
         }
         ExamVO vo = new ExamVO();
         BeanUtils.copyProperties(exam, vo);
+        vo.setStatus(computeStatus(exam));
         Paper paper = paperMapper.selectById(exam.getPaperId());
         if (paper != null) {
             vo.setPaperName(paper.getName());
@@ -79,7 +108,7 @@ public class ExamServiceImpl implements ExamService {
     public boolean save(ExamDTO dto) {
         Exam exam = new Exam();
         BeanUtils.copyProperties(dto, exam);
-        exam.setStatus(Constants.EXAM_NOT_START);
+        exam.setStatus(computeStatus(dto.getStartTime(), dto.getEndTime()));
         return examMapper.insert(exam) > 0;
     }
 
@@ -88,6 +117,7 @@ public class ExamServiceImpl implements ExamService {
         Exam exam = new Exam();
         BeanUtils.copyProperties(dto, exam);
         exam.setId(id);
+        exam.setStatus(computeStatus(dto.getStartTime(), dto.getEndTime()));
         return examMapper.updateById(exam) > 0;
     }
 
