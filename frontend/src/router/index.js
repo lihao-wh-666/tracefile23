@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../components/Layout.vue'
 import { useUserStore } from '../store/user'
 import errorHandler from '../utils/errorHandler'
+import { startSessionTimeoutCheck, stopSessionTimeoutCheck } from '../utils/sessionTimeout'
 import ErrorBoundary from '../views/error/ErrorBoundary.vue'
 
 const routes = [
@@ -85,6 +86,12 @@ const routes = [
         meta: { title: '用户管理', roles: [1] }
       },
       {
+        path: 'system-config',
+        name: 'SystemConfigList',
+        component: () => import('../views/systemConfig/SystemConfigList.vue'),
+        meta: { title: '系统参数管理', roles: [1] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
@@ -109,17 +116,22 @@ router.beforeEach(async (to, from, next) => {
   const publicPaths = ['/login', '/register', '/forgot-password', '/error/500']
 
   if (!publicPaths.includes(to.path) && !token) {
+    stopSessionTimeoutCheck()
     next('/login')
     return
   }
 
   if (token && !publicPaths.includes(to.path) && to.name !== 'Error404') {
     const userStore = useUserStore()
+    if (!userStore.token) {
+      userStore.token = token
+    }
     if (!userStore.userInfo) {
       try {
         await userStore.getUserInfo()
       } catch (err) {
         userStore.logout()
+        stopSessionTimeoutCheck()
         next('/login')
         return
       }
@@ -132,6 +144,10 @@ router.beforeEach(async (to, from, next) => {
         return
       }
     }
+
+    startSessionTimeoutCheck()
+  } else if (publicPaths.includes(to.path)) {
+    stopSessionTimeoutCheck()
   }
 
   next()

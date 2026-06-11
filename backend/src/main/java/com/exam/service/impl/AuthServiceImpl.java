@@ -4,6 +4,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.asymmetric.RSA;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.exam.common.BusinessException;
+import com.exam.common.Constants;
 import com.exam.common.ErrorCode;
 import com.exam.dto.LoginDTO;
 import com.exam.dto.RegisterDTO;
@@ -13,8 +14,10 @@ import com.exam.entity.User;
 import com.exam.mapper.UserMapper;
 import com.exam.security.JwtUtils;
 import com.exam.service.AuthService;
+import com.exam.service.SystemConfigService;
 import com.exam.vo.LoginVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired(required = false)
     private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private RedisTemplate<String, Object> objectRedisTemplate;
+
+    @Autowired
+    private SystemConfigService systemConfigService;
 
     private static final String CODE_PREFIX = "auth:code:";
     private static final int CODE_EXPIRE_MINUTES = 5;
@@ -60,6 +69,19 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.USER_DISABLED);
         }
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
+
+        int timeoutMinutes = systemConfigService.getIntValueByKey(
+                Constants.CONFIG_LOGIN_TIMEOUT,
+                Constants.DEFAULT_LOGIN_TIMEOUT_MINUTES
+        );
+        String sessionKey = Constants.SESSION_LAST_ACTIVITY_PREFIX + user.getId();
+        objectRedisTemplate.opsForValue().set(
+                sessionKey,
+                String.valueOf(System.currentTimeMillis()),
+                timeoutMinutes + 5,
+                TimeUnit.MINUTES
+        );
+
         LoginVO vo = new LoginVO();
         vo.setToken(token);
         vo.setUserId(user.getId());
@@ -68,6 +90,14 @@ public class AuthServiceImpl implements AuthService {
         vo.setRole(user.getRole());
         vo.setAvatar(user.getAvatar());
         return vo;
+    }
+
+    @Override
+    public void logout(Long userId) {
+        if (userId != null) {
+            String sessionKey = Constants.SESSION_LAST_ACTIVITY_PREFIX + userId;
+            objectRedisTemplate.delete(sessionKey);
+        }
     }
 
     @Override

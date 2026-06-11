@@ -17,9 +17,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final SessionTimeoutFilter sessionTimeoutFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    public SecurityConfig(JwtFilter jwtFilter, SessionTimeoutFilter sessionTimeoutFilter) {
         this.jwtFilter = jwtFilter;
+        this.sessionTimeoutFilter = sessionTimeoutFilter;
     }
 
     @Bean
@@ -44,6 +46,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated();
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(sessionTimeoutFilter, JwtFilter.class);
         return http.build();
     }
 

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getPublicKey, login as loginApi } from '../api/auth'
+import { getPublicKey, login as loginApi, logout as logoutApi } from '../api/auth'
 import { getUserInfo as getUserInfoApi, updateProfile as updateProfileApi, uploadAvatar as uploadAvatarApi } from '../api/user'
 import { encryptPassword } from '../utils/rsa'
 import router from '../router'
@@ -25,11 +25,19 @@ export const useUserStore = defineStore('user', {
       return res
     },
 
-    logout() {
-      this.token = ''
-      this.userInfo = null
-      localStorage.removeItem('token')
-      router.push('/login')
+    async logout() {
+      try {
+        if (this.token) {
+          await logoutApi()
+        }
+      } catch (e) {
+        console.error('Logout API error:', e)
+      } finally {
+        this.token = ''
+        this.userInfo = null
+        localStorage.removeItem('token')
+        router.push('/login')
+      }
     },
 
     async getUserInfo() {

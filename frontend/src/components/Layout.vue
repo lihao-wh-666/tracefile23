@@ -66,6 +66,10 @@
           <el-icon><UserFilled /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/system-config" v-if="hasRole([1])">
+          <el-icon><Tools /></el-icon>
+          <span>系统参数管理</span>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><Setting /></el-icon>
           <span>个人中心</span>
@@ -102,7 +106,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()

@@ -54,4 +54,12 @@ public class AuthController {
         authService.resetPassword(dto);
         return Result.ok();
     }
+
+    @PostMapping("/logout")
+    public Result<Void> logout() {
+        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName());
+        authService.logout(userId);
+        return Result.ok();
+    }
 }

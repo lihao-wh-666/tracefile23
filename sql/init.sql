@@ -170,3 +170,20 @@ INSERT INTO `subject` (`name`, `description`) VALUES
 ('大学物理', '大学物理基础课程，涵盖力学、电磁学、光学、热学等内容'),
 ('大学化学', '大学化学基础课程，学习无机化学、有机化学基础知识'),
 ('大学体育', '大学体育课程，包含田径、球类、健身等体育运动训练');
+
+CREATE TABLE `system_config` (
+    `id`           BIGINT       NOT NULL AUTO_INCREMENT,
+    `config_key`   VARCHAR(100) NOT NULL COMMENT '配置键名',
+    `config_value` VARCHAR(500) DEFAULT NULL COMMENT '配置值',
+    `config_name`  VARCHAR(200) NOT NULL COMMENT '配置名称',
+    `description`  VARCHAR(500) DEFAULT NULL COMMENT '配置描述',
+    `value_type`   TINYINT      NOT NULL DEFAULT 1 COMMENT '值类型：1字符串 2整数 3布尔 4JSON',
+    `create_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `update_time`  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`      TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_config_key` (`config_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='系统配置表';
+
+INSERT INTO `system_config` (`config_key`, `config_value`, `config_name`, `description`, `value_type`) VALUES
+('login.timeout.minutes', '30', '登录超时时间(分钟)', '用户无操作超过该时间将自动登出，单位：分钟', 2);

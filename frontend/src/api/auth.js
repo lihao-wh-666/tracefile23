@@ -19,3 +19,7 @@ export function sendCode(data) {
 export function resetPassword(data) {
   return request.post('/auth/reset-password', data)
 }
+
+export function logout() {
+  return request.post('/auth/logout')
+}

@@ -23,4 +23,14 @@ public class Constants {
 
     public static final int USER_STATUS_ENABLED = 1;
     public static final int USER_STATUS_DISABLED = 0;
+
+    public static final String CONFIG_LOGIN_TIMEOUT = "login.timeout.minutes";
+    public static final int DEFAULT_LOGIN_TIMEOUT_MINUTES = 30;
+
+    public static final String SESSION_LAST_ACTIVITY_PREFIX = "session:last-activity:";
+
+    public static final int CONFIG_VALUE_TYPE_STRING = 1;
+    public static final int CONFIG_VALUE_TYPE_INTEGER = 2;
+    public static final int CONFIG_VALUE_TYPE_BOOLEAN = 3;
+    public static final int CONFIG_VALUE_TYPE_JSON = 4;
 }

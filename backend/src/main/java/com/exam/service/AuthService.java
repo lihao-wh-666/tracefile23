@@ -10,6 +10,8 @@ public interface AuthService {
 
     LoginVO login(LoginDTO dto);
 
+    void logout(Long userId);
+
     void register(RegisterDTO dto);
 
     void sendCode(SendCodeDTO dto);
