@@ -43,6 +43,12 @@ const routes = [
         meta: { title: '题库管理', roles: [1, 2] }
       },
       {
+        path: 'subject',
+        name: 'SubjectList',
+        component: () => import('../views/subject/SubjectList.vue'),
+        meta: { title: '科目管理', roles: [1, 2] }
+      },
+      {
         path: 'paper',
         name: 'PaperList',
         component: () => import('../views/paper/PaperList.vue'),

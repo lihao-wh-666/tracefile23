@@ -42,6 +42,10 @@
           <el-icon><Document /></el-icon>
           <span>题库管理</span>
         </el-menu-item>
+        <el-menu-item index="/subject" v-if="hasRole([1, 2])">
+          <el-icon><Reading /></el-icon>
+          <span>科目管理</span>
+        </el-menu-item>
         <el-menu-item index="/paper" v-if="hasRole([1, 2])">
           <el-icon><Notebook /></el-icon>
           <span>试卷管理</span>
@@ -98,7 +102,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()
