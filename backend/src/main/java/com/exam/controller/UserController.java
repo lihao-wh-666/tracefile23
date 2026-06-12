@@ -2,7 +2,9 @@ package com.exam.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.exam.annotation.Log;
+import com.exam.common.BusinessException;
 import com.exam.common.Constants;
+import com.exam.common.ErrorCode;
 import com.exam.common.Result;
 import com.exam.dto.ChangePasswordDTO;
 import com.exam.dto.UpdateProfileDTO;
@@ -11,6 +13,8 @@ import com.exam.entity.User;
 import com.exam.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,34 +30,43 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getName())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     @GetMapping("/info")
     public Result<User> info() {
-        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long userId = getCurrentUserId();
         return Result.ok(userService.getById(userId));
     }
 
     @PutMapping("/profile")
     @Log(module = "个人中心", operation = "更新个人信息")
     public Result<Boolean> updateProfile(@RequestBody @Valid UpdateProfileDTO dto) {
-        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long userId = getCurrentUserId();
         return Result.ok(userService.updateProfile(userId, dto));
     }
 
     @PutMapping("/password")
     @Log(module = "个人中心", operation = "修改密码")
     public Result<Boolean> changePassword(@RequestBody @Valid ChangePasswordDTO dto) {
-        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long userId = getCurrentUserId();
         return Result.ok(userService.changePassword(userId, dto));
     }
 
     @PostMapping("/avatar")
     @Log(module = "个人中心", operation = "上传头像")
     public Result<String> uploadAvatar(@RequestPart("file") MultipartFile file) throws IOException {
-        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long userId = getCurrentUserId();
         if (file.isEmpty()) {
             return Result.fail("请选择要上传的文件");
         }
@@ -123,8 +136,7 @@ public class UserController {
     @PreAuthorize("hasRole('1')")
     @Log(module = "用户管理", operation = "删除用户")
     public Result<Boolean> remove(@PathVariable Long id) {
-        Long currentUserId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long currentUserId = getCurrentUserId();
         if (currentUserId.equals(id)) {
             return Result.fail("不能删除当前登录用户");
         }
@@ -135,8 +147,7 @@ public class UserController {
     @PreAuthorize("hasRole('1')")
     @Log(module = "用户管理", operation = "修改用户状态")
     public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
-        Long currentUserId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
+        Long currentUserId = getCurrentUserId();
         if (currentUserId.equals(id) && status == Constants.USER_STATUS_DISABLED) {
             return Result.fail("不能禁用当前登录用户");
         }

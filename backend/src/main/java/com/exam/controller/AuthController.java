@@ -57,9 +57,16 @@ public class AuthController {
 
     @PostMapping("/logout")
     public Result<Void> logout() {
-        Long userId = Long.parseLong(org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getName());
-        authService.logout(userId);
+        var authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getName())) {
+            try {
+                Long userId = Long.parseLong(authentication.getName());
+                authService.logout(userId);
+            } catch (NumberFormatException ignored) {
+            }
+        }
         return Result.ok();
     }
 }

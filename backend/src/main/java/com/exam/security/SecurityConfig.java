@@ -1,7 +1,10 @@
 package com.exam.security;
 
+import com.exam.service.SystemConfigService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,16 +19,35 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
-    private final SessionTimeoutFilter sessionTimeoutFilter;
+    private final JwtUtils jwtUtils;
 
-    public SecurityConfig(JwtFilter jwtFilter, SessionTimeoutFilter sessionTimeoutFilter) {
-        this.jwtFilter = jwtFilter;
-        this.sessionTimeoutFilter = sessionTimeoutFilter;
+    public SecurityConfig(JwtUtils jwtUtils) {
+        this.jwtUtils = jwtUtils;
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public JwtFilter jwtFilter() {
+        return new JwtFilter(jwtUtils);
+    }
+
+    @Bean
+    public SessionTimeoutFilter sessionTimeoutFilter(RedisTemplate<String, Object> redisTemplate,
+                                                      SystemConfigService systemConfigService,
+                                                      ObjectMapper objectMapper,
+                                                      JwtUtils jwtUtils) {
+        return new SessionTimeoutFilter(redisTemplate, systemConfigService, objectMapper, jwtUtils);
+    }
+
+    @Bean
+    public DebugFilter debugFilter() {
+        return new DebugFilter();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                            JwtFilter jwtFilter,
+                                            SessionTimeoutFilter sessionTimeoutFilter,
+                                            DebugFilter debugFilter) throws Exception {
         http
                 .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -33,6 +55,8 @@ public class SecurityConfig {
                 .authorizeRequests()
                 .antMatchers("/api/auth/**").permitAll()
                 .antMatchers("/auth/**").permitAll()
+                .antMatchers("/api/system-config/value/**").permitAll()
+                .antMatchers("/system-config/value/**").permitAll()
                 .antMatchers("/api/doc.html/**").permitAll()
                 .antMatchers("/doc.html/**").permitAll()
                 .antMatchers("/api/webjars/**").permitAll()
@@ -46,7 +70,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated();
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterAfter(sessionTimeoutFilter, JwtFilter.class);
+        http.addFilterBefore(sessionTimeoutFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(debugFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class);
         return http.build();
     }
 
