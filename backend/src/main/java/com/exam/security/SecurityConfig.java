@@ -39,15 +39,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public DebugFilter debugFilter() {
-        return new DebugFilter();
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                             JwtFilter jwtFilter,
-                                            SessionTimeoutFilter sessionTimeoutFilter,
-                                            DebugFilter debugFilter) throws Exception {
+                                            SessionTimeoutFilter sessionTimeoutFilter) throws Exception {
         http
                 .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -71,7 +65,6 @@ public class SecurityConfig {
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(sessionTimeoutFilter, UsernamePasswordAuthenticationFilter.class);
-        http.addFilterBefore(debugFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class);
         return http.build();
     }
 

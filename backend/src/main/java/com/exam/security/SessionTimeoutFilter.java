@@ -47,38 +47,28 @@ public class SessionTimeoutFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String uri = request.getRequestURI();
         String token = resolveToken(request);
-        log.info("[SessionTimeoutFilter] START - URI: {}, hasToken: {}", uri, StringUtils.hasText(token));
-        log.info("[SessionTimeoutFilter] At START - SecurityContext auth: {}",
-                SecurityContextHolder.getContext().getAuthentication());
 
         if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
             Long userId = jwtUtils.getUserIdFromToken(token);
-            log.info("[SessionTimeoutFilter] Token valid, userId: {}", userId);
 
             if (userId != null) {
                 String sessionKey = Constants.SESSION_LAST_ACTIVITY_PREFIX + userId;
                 String lastActivityStr = (String) redisTemplate.opsForValue().get(sessionKey);
-                log.info("[SessionTimeoutFilter] lastActivityStr from Redis: {}", lastActivityStr);
 
                 int timeoutMinutes = systemConfigService.getIntValueByKey(
                         Constants.CONFIG_LOGIN_TIMEOUT,
                         Constants.DEFAULT_LOGIN_TIMEOUT_MINUTES
                 );
-                log.info("[SessionTimeoutFilter] timeoutMinutes configured: {}", timeoutMinutes);
 
                 long timeoutMillis = (long) timeoutMinutes * 60 * 1000;
 
                 if (lastActivityStr != null) {
                     long lastActivity = Long.parseLong(lastActivityStr);
                     long currentTime = System.currentTimeMillis();
-                    long diff = currentTime - lastActivity;
-                    log.info("[SessionTimeoutFilter] time diff: {}ms, timeoutMillis: {}ms, timeout: {}",
-                            diff, timeoutMillis, diff > timeoutMillis);
 
                     if (currentTime - lastActivity > timeoutMillis) {
-                        log.warn("[SessionTimeoutFilter] SESSION EXPIRED for userId: {}", userId);
+                        log.warn("[SessionTimeout] SESSION EXPIRED for userId: {}", userId);
                         redisTemplate.delete(sessionKey);
                         SecurityContextHolder.clearContext();
                         sendTimeoutResponse(response);
@@ -93,16 +83,10 @@ public class SessionTimeoutFilter extends OncePerRequestFilter {
                         timeoutMinutes + 5,
                         TimeUnit.MINUTES
                 );
-                log.info("[SessionTimeoutFilter] Updated last-activity for userId: {} -> {}", userId, newActivityTime);
             }
-        } else if (StringUtils.hasText(token)) {
-            log.warn("[SessionTimeoutFilter] Token present but INVALID for URI: {}", uri);
         }
 
-        log.info("[SessionTimeoutFilter] Continuing filter chain for URI: {}", uri);
         filterChain.doFilter(request, response);
-        log.info("[SessionTimeoutFilter] After filter chain - SecurityContext auth: {}",
-                SecurityContextHolder.getContext().getAuthentication());
     }
 
     @Override
