@@ -17,6 +17,8 @@ public class ExamAnswer {
 
     private String answer;
 
+    private String optionOrder;
+
     private Integer isCorrect;
 
     private Integer score;

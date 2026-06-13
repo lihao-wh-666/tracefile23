@@ -11,6 +11,7 @@ import com.exam.dto.SubmitExamDTO;
 import com.exam.entity.*;
 import com.exam.mapper.*;
 import com.exam.service.ExamRecordService;
+import com.exam.vo.ExamQuestionVO;
 import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
@@ -140,14 +141,39 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 new LambdaQueryWrapper<PaperQuestion>()
                         .eq(PaperQuestion::getPaperId, exam.getPaperId())
                         .orderByAsc(PaperQuestion::getSort));
-        for (PaperQuestion pq : paperQuestions) {
+
+        List<Long> questionIds = paperQuestions.stream()
+                .map(PaperQuestion::getQuestionId)
+                .collect(Collectors.toList());
+        Collections.shuffle(questionIds);
+        record.setQuestionOrder(questionIds.stream().map(String::valueOf).collect(Collectors.joining(",")));
+        examRecordMapper.updateById(record);
+
+        Map<Long, Question> questionMap = new HashMap<>();
+        if (!questionIds.isEmpty()) {
+            questionMapper.selectBatchIds(questionIds).forEach(q -> questionMap.put(q.getId(), q));
+        }
+
+        for (Long qid : questionIds) {
             ExamAnswer answer = new ExamAnswer();
             answer.setRecordId(record.getId());
-            answer.setQuestionId(pq.getQuestionId());
+            answer.setQuestionId(qid);
             answer.setAnswer("");
             answer.setIsCorrect(0);
             answer.setScore(0);
             answer.setAutoScore(0);
+
+            Question q = questionMap.get(qid);
+            if (q != null && (q.getType() == Constants.TYPE_SINGLE || q.getType() == Constants.TYPE_MULTI)) {
+                List<String> keys = new ArrayList<>();
+                if (q.getOptionA() != null) keys.add("A");
+                if (q.getOptionB() != null) keys.add("B");
+                if (q.getOptionC() != null) keys.add("C");
+                if (q.getOptionD() != null) keys.add("D");
+                Collections.shuffle(keys);
+                answer.setOptionOrder(String.join("", keys));
+            }
+
             examAnswerMapper.insert(answer);
         }
 
@@ -192,7 +218,9 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 if (examAnswer == null) {
                     continue;
                 }
-                examAnswer.setAnswer(item.getAnswer());
+
+                String originalAnswer = remapAnswerToOriginal(item.getAnswer(), examAnswer.getOptionOrder());
+                examAnswer.setAnswer(originalAnswer);
 
                 Question question = questionMap.get(item.getQuestionId());
                 if (question == null) {
@@ -203,7 +231,7 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                     continue;
                 }
 
-                int autoScore = autoGrade(question, item.getAnswer());
+                int autoScore = autoGrade(question, originalAnswer);
                 examAnswer.setAutoScore(autoScore);
                 if (question.getType() == Constants.TYPE_ESSAY) {
                     examAnswer.setIsCorrect(2);
@@ -463,6 +491,28 @@ public class ExamRecordServiceImpl implements ExamRecordService {
                 }
             }
         }
+    }
+
+    private String remapAnswerToOriginal(String displayAnswer, String optionOrder) {
+        if (displayAnswer == null || displayAnswer.trim().isEmpty()) {
+            return displayAnswer;
+        }
+        if (optionOrder == null || optionOrder.isEmpty()) {
+            return displayAnswer;
+        }
+
+        Map<Character, Character> displayToOriginal = new HashMap<>();
+        char[] originalKeys = {'A', 'B', 'C', 'D'};
+        for (int i = 0; i < optionOrder.length() && i < originalKeys.length; i++) {
+            displayToOriginal.put(originalKeys[i], optionOrder.charAt(i));
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (char c : displayAnswer.toCharArray()) {
+            Character original = displayToOriginal.get(c);
+            result.append(original != null ? original : c);
+        }
+        return result.toString();
     }
 
     private int autoGrade(Question question, String userAnswer) {
@@ -814,6 +864,89 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         }
         return examAnswerMapper.selectList(
                 new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, recordId));
+    }
+
+    @Override
+    public List<ExamQuestionVO> getExamQuestions(Long recordId, Long userId) {
+        ExamRecord record = examRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new RuntimeException("考试记录不存在");
+        }
+        if (!record.getUserId().equals(userId)) {
+            throw new RuntimeException("无权查看此考试记录");
+        }
+
+        List<ExamAnswer> answers = examAnswerMapper.selectList(
+                new LambdaQueryWrapper<ExamAnswer>().eq(ExamAnswer::getRecordId, recordId));
+        Map<Long, ExamAnswer> answerMap = answers.stream()
+                .collect(Collectors.toMap(ExamAnswer::getQuestionId, a -> a));
+
+        List<Long> orderedIds;
+        if (record.getQuestionOrder() != null && !record.getQuestionOrder().isEmpty()) {
+            orderedIds = Arrays.stream(record.getQuestionOrder().split(","))
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+        } else {
+            orderedIds = answers.stream().map(ExamAnswer::getQuestionId).collect(Collectors.toList());
+        }
+
+        Map<Long, Question> questionMap = new HashMap<>();
+        if (!orderedIds.isEmpty()) {
+            questionMapper.selectBatchIds(orderedIds).forEach(q -> questionMap.put(q.getId(), q));
+        }
+
+        List<ExamQuestionVO> result = new ArrayList<>();
+        int sortIndex = 1;
+        for (Long qid : orderedIds) {
+            Question q = questionMap.get(qid);
+            if (q == null) continue;
+
+            ExamQuestionVO vo = new ExamQuestionVO();
+            vo.setId(q.getId());
+            vo.setType(q.getType());
+            vo.setContent(q.getContent());
+            vo.setScore(q.getScore());
+            vo.setSortIndex(sortIndex++);
+
+            ExamAnswer ea = answerMap.get(qid);
+            String optionOrder = (ea != null && ea.getOptionOrder() != null) ? ea.getOptionOrder() : "ABCD";
+
+            if (q.getType() == Constants.TYPE_SINGLE || q.getType() == Constants.TYPE_MULTI) {
+                Map<String, String> optionData = new LinkedHashMap<>();
+                if (q.getOptionA() != null) optionData.put("A", q.getOptionA());
+                if (q.getOptionB() != null) optionData.put("B", q.getOptionB());
+                if (q.getOptionC() != null) optionData.put("C", q.getOptionC());
+                if (q.getOptionD() != null) optionData.put("D", q.getOptionD());
+
+                List<String> shuffledKeys = new ArrayList<>();
+                for (char c : optionOrder.toCharArray()) {
+                    String key = String.valueOf(c);
+                    if (optionData.containsKey(key)) {
+                        shuffledKeys.add(key);
+                    }
+                }
+                for (String key : optionData.keySet()) {
+                    if (!shuffledKeys.contains(key)) {
+                        shuffledKeys.add(key);
+                    }
+                }
+
+                vo.setOptionOrder(optionOrder);
+                if (shuffledKeys.size() >= 1) vo.setOptionA(optionData.get(shuffledKeys.get(0)));
+                if (shuffledKeys.size() >= 2) vo.setOptionB(optionData.get(shuffledKeys.get(1)));
+                if (shuffledKeys.size() >= 3) vo.setOptionC(optionData.get(shuffledKeys.get(2)));
+                if (shuffledKeys.size() >= 4) vo.setOptionD(optionData.get(shuffledKeys.get(3)));
+            } else {
+                vo.setOptionA(q.getOptionA());
+                vo.setOptionB(q.getOptionB());
+                vo.setOptionC(q.getOptionC());
+                vo.setOptionD(q.getOptionD());
+            }
+
+            result.add(vo);
+        }
+
+        return result;
     }
 
     private List<ExamRecordVO> getMyRecordsForExport(Long userId) {

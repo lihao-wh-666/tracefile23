@@ -8,6 +8,7 @@ import com.exam.dto.SaveAnswersDTO;
 import com.exam.dto.SubmitExamDTO;
 import com.exam.entity.ExamAnswer;
 import com.exam.service.ExamRecordService;
+import com.exam.vo.ExamQuestionVO;
 import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
@@ -51,6 +52,13 @@ public class ExamRecordController {
     public Result<List<ExamAnswer>> getRecordAnswers(@PathVariable Long id) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         return Result.ok(recordService.getRecordAnswers(id, userId));
+    }
+
+    @GetMapping("/{id}/exam-questions")
+    @PreAuthorize("hasAnyRole('1', '2', '3')")
+    public Result<List<ExamQuestionVO>> getExamQuestions(@PathVariable Long id) {
+        Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return Result.ok(recordService.getExamQuestions(id, userId));
     }
 
     @GetMapping("/current")

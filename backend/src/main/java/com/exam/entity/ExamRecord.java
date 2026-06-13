@@ -31,6 +31,8 @@ public class ExamRecord {
 
     private Integer totalPauseTime;
 
+    private String questionOrder;
+
     private LocalDateTime lastPauseTime;
 
     private LocalDateTime lastResumeTime;

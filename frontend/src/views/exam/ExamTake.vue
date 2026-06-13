@@ -151,10 +151,9 @@ import {
 } from '@element-plus/icons-vue'
 import {
   startExam, submitExam, saveAnswer, saveAnswers,
-  pauseExam, resumeExam, getCurrentExam, getRecordAnswers
+  pauseExam, resumeExam, getCurrentExam, getRecordAnswers, getExamQuestions
 } from '../../api/record'
 import { getExamDetail } from '../../api/exam'
-import { getPaperDetail } from '../../api/paper'
 import { useUserStore } from '../../store/user'
 
 const route = useRoute()
@@ -458,8 +457,8 @@ const init = async () => {
     const examRes = await getExamDetail(record.examId || examId)
     Object.assign(examInfo, examRes.data)
 
-    const paperRes = await getPaperDetail(record.paperId)
-    questions.value = paperRes.data.questions || []
+    const questionsRes = await getExamQuestions(record.id)
+    questions.value = questionsRes.data || []
     initAnswers(questions.value)
 
     try {

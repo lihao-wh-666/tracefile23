@@ -44,6 +44,10 @@ export function getRecordAnswers(recordId) {
   return request.get(`/record/${recordId}/answers`)
 }
 
+export function getExamQuestions(recordId) {
+  return request.get(`/record/${recordId}/exam-questions`)
+}
+
 export function getMyStat() {
   return request.get('/record/my/stat')
 }

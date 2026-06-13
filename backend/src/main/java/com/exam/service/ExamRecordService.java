@@ -6,6 +6,7 @@ import com.exam.dto.SaveAnswerDTO;
 import com.exam.dto.SaveAnswersDTO;
 import com.exam.dto.SubmitExamDTO;
 import com.exam.entity.ExamAnswer;
+import com.exam.vo.ExamQuestionVO;
 import com.exam.vo.ExamRecordVO;
 import com.exam.vo.PersonalScoreStatVO;
 import com.exam.vo.ScoreStatVO;
@@ -48,6 +49,8 @@ public interface ExamRecordService {
     ExamRecordVO resumeExam(PauseExamDTO dto, Long userId);
 
     List<ExamAnswer> getRecordAnswers(Long recordId, Long userId);
+
+    List<ExamQuestionVO> getExamQuestions(Long recordId, Long userId);
 
     byte[] exportMyRecordsExcel(Long userId) throws Exception;
 
