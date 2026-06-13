@@ -26,22 +26,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtFilter jwtFilter() {
-        return new JwtFilter(jwtUtils);
-    }
-
-    @Bean
-    public SessionTimeoutFilter sessionTimeoutFilter(RedisTemplate<String, Object> redisTemplate,
-                                                      SystemConfigService systemConfigService,
-                                                      ObjectMapper objectMapper,
-                                                      JwtUtils jwtUtils) {
-        return new SessionTimeoutFilter(redisTemplate, systemConfigService, objectMapper, jwtUtils);
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                            JwtFilter jwtFilter,
-                                            SessionTimeoutFilter sessionTimeoutFilter) throws Exception {
+                                            RedisTemplate<String, Object> redisTemplate,
+                                            SystemConfigService systemConfigService,
+                                            ObjectMapper objectMapper) throws Exception {
+        JwtFilter jwtFilter = new JwtFilter(jwtUtils);
+        SessionTimeoutFilter sessionTimeoutFilter = new SessionTimeoutFilter(
+                redisTemplate, systemConfigService, objectMapper, jwtUtils
+        );
+
         http
                 .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
