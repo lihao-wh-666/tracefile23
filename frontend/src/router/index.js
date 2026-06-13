@@ -80,6 +80,12 @@ const routes = [
         meta: { title: '个人成绩台账', roles: [1, 2, 3] }
       },
       {
+        path: 'question-analysis',
+        name: 'QuestionAnalysis',
+        component: () => import('../views/questionAnalysis/QuestionAnalysis.vue'),
+        meta: { title: '题目数据分析', roles: [1, 2] }
+      },
+      {
         path: 'user',
         name: 'UserList',
         component: () => import('../views/user/UserList.vue'),

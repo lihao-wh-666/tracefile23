@@ -58,6 +58,10 @@
           <el-icon><DataAnalysis /></el-icon>
           <span>成绩统计</span>
         </el-menu-item>
+        <el-menu-item index="/question-analysis" v-if="hasRole([1, 2])">
+          <el-icon><TrendCharts /></el-icon>
+          <span>题目数据分析</span>
+        </el-menu-item>
         <el-menu-item index="/personal-score" v-if="hasRole([1, 2, 3])">
           <el-icon><User /></el-icon>
           <span>个人成绩台账</span>
@@ -106,7 +110,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()
