@@ -240,8 +240,8 @@ const handleSave = async () => {
 const handleReset = async () => {
   try {
     await ElMessageBox.confirm(
-      '确定要恢复为默认设置吗？',
-      '提示',
+      t('settings.resetConfirmMessage'),
+      t('settings.resetConfirmTitle'),
       {
         confirmButtonText: t('common.confirm'),
         cancelButtonText: t('common.cancel'),
@@ -252,10 +252,11 @@ const handleReset = async () => {
     localTheme.value = preferencesStore.theme
     localLanguage.value = preferencesStore.language
     localSidebarCollapsed.value = preferencesStore.sidebarCollapsed
-    ElMessage.success(t('common.saveSuccess'))
+    ElMessage.success(t('settings.resetSuccess'))
   } catch (e) {
     if (e !== 'cancel') {
       console.error(e)
+      ElMessage.error(e?.message || t('common.fail'))
     }
   }
 }

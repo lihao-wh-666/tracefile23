@@ -47,7 +47,10 @@ export default {
     savedTip: '設定が保存されました',
     previewTitle: 'プレビュー',
     appearance: '外観',
-    interface: 'インターフェース'
+    interface: 'インターフェース',
+    resetConfirmTitle: '確認',
+    resetConfirmMessage: 'デフォルト設定に戻してもよろしいですか？',
+    resetSuccess: 'デフォルト設定に戻しました'
   },
   login: {
     title: 'オンライン試験システム',

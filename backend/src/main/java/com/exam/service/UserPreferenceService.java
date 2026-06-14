@@ -12,4 +12,6 @@ public interface UserPreferenceService {
     boolean savePreference(UserPreferenceDTO dto);
 
     UserPreference initDefaultPreference(Long userId);
+
+    boolean resetToDefault();
 }

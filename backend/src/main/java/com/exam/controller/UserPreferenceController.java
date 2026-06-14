@@ -27,4 +27,10 @@ public class UserPreferenceController {
     public Result<Boolean> savePreference(@RequestBody @Valid UserPreferenceDTO dto) {
         return Result.ok(userPreferenceService.savePreference(dto));
     }
+
+    @PostMapping("/reset")
+    @Log(module = "个人偏好设置", operation = "恢复默认设置")
+    public Result<Boolean> resetToDefault() {
+        return Result.ok(userPreferenceService.resetToDefault());
+    }
 }

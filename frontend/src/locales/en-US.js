@@ -47,7 +47,10 @@ export default {
     savedTip: 'Settings saved, applied immediately',
     previewTitle: 'Preview',
     appearance: 'Appearance',
-    interface: 'Interface'
+    interface: 'Interface',
+    resetConfirmTitle: 'Confirm',
+    resetConfirmMessage: 'Are you sure you want to reset to default settings?',
+    resetSuccess: 'Settings have been reset to default'
   },
   login: {
     title: 'Online Exam System',

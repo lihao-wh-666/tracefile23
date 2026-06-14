@@ -80,6 +80,24 @@ public class UserPreferenceServiceImpl implements UserPreferenceService {
         return preference;
     }
 
+    @Override
+    public boolean resetToDefault() {
+        Long userId = getCurrentUserId();
+        UserPreference exist = getByUserId(userId);
+        if (exist == null) {
+            initDefaultPreference(userId);
+            return true;
+        } else {
+            UserPreference update = new UserPreference();
+            update.setId(exist.getId());
+            update.setTheme("light");
+            update.setLanguage("zh-CN");
+            update.setSidebarCollapsed(0);
+            update.setExtraConfig(null);
+            return userPreferenceMapper.updateById(update) > 0;
+        }
+    }
+
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()

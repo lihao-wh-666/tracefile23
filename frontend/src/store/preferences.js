@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getUserPreference, saveUserPreference } from '../api/userPreference'
+import { getUserPreference, saveUserPreference, resetUserPreference } from '../api/userPreference'
 import { setLocale, getLocale } from '../locales'
 
 const DEFAULT_PREFERENCES = {
@@ -123,8 +123,15 @@ export const usePreferencesStore = defineStore('preferences', {
       this.preferences.sidebarCollapsed = collapsed ? 1 : 0
     },
 
-    resetToDefault() {
-      return this.updatePreferences({ ...DEFAULT_PREFERENCES })
+    async resetToDefault() {
+      try {
+        await resetUserPreference()
+        this.applyPreferences({ ...DEFAULT_PREFERENCES })
+        return true
+      } catch (err) {
+        console.error('Failed to reset preferences:', err)
+        throw err
+      }
     },
 
     clearOnLogout() {

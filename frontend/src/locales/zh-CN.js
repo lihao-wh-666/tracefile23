@@ -47,7 +47,10 @@ export default {
     savedTip: '设置已保存，即时生效',
     previewTitle: '预览效果',
     appearance: '外观设置',
-    interface: '界面设置'
+    interface: '界面设置',
+    resetConfirmTitle: '提示',
+    resetConfirmMessage: '确定要恢复为默认设置吗？',
+    resetSuccess: '已恢复为默认设置'
   },
   login: {
     title: '在线考试系统',
