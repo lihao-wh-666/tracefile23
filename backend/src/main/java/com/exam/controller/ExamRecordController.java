@@ -51,14 +51,32 @@ public class ExamRecordController {
     @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<List<ExamAnswer>> getRecordAnswers(@PathVariable Long id) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return Result.ok(recordService.getRecordAnswers(id, userId));
+        Integer userRole = getCurrentUserRole();
+        return Result.ok(recordService.getRecordAnswers(id, userId, userRole));
     }
 
     @GetMapping("/{id}/exam-questions")
     @PreAuthorize("hasAnyRole('1', '2', '3')")
     public Result<List<ExamQuestionVO>> getExamQuestions(@PathVariable Long id) {
         Long userId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return Result.ok(recordService.getExamQuestions(id, userId));
+        Integer userRole = getCurrentUserRole();
+        return Result.ok(recordService.getExamQuestions(id, userId, userRole));
+    }
+
+    private Integer getCurrentUserRole() {
+        var authorities = SecurityContextHolder.getContext().getAuthentication().getAuthorities();
+        if (authorities != null) {
+            for (var authority : authorities) {
+                String auth = authority.getAuthority();
+                if (auth != null && auth.startsWith("ROLE_")) {
+                    try {
+                        return Integer.parseInt(auth.substring(5));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     @GetMapping("/current")

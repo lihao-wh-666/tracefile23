@@ -854,12 +854,12 @@ public class ExamRecordServiceImpl implements ExamRecordService {
     }
 
     @Override
-    public List<ExamAnswer> getRecordAnswers(Long recordId, Long userId) {
+    public List<ExamAnswer> getRecordAnswers(Long recordId, Long userId, Integer userRole) {
         ExamRecord record = examRecordMapper.selectById(recordId);
         if (record == null) {
             throw new RuntimeException("考试记录不存在");
         }
-        if (!record.getUserId().equals(userId)) {
+        if (!isAdminOrTeacher(userRole) && !record.getUserId().equals(userId)) {
             throw new RuntimeException("无权查看此考试记录");
         }
         return examAnswerMapper.selectList(
@@ -867,12 +867,12 @@ public class ExamRecordServiceImpl implements ExamRecordService {
     }
 
     @Override
-    public List<ExamQuestionVO> getExamQuestions(Long recordId, Long userId) {
+    public List<ExamQuestionVO> getExamQuestions(Long recordId, Long userId, Integer userRole) {
         ExamRecord record = examRecordMapper.selectById(recordId);
         if (record == null) {
             throw new RuntimeException("考试记录不存在");
         }
-        if (!record.getUserId().equals(userId)) {
+        if (!isAdminOrTeacher(userRole) && !record.getUserId().equals(userId)) {
             throw new RuntimeException("无权查看此考试记录");
         }
 
@@ -1298,5 +1298,9 @@ public class ExamRecordServiceImpl implements ExamRecordService {
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setPadding(6);
         return cell;
+    }
+
+    private boolean isAdminOrTeacher(Integer userRole) {
+        return userRole != null && (userRole == Constants.ROLE_ADMIN || userRole == Constants.ROLE_TEACHER);
     }
 }
