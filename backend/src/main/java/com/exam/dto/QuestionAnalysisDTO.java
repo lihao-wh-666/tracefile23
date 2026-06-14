@@ -2,6 +2,8 @@ package com.exam.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class QuestionAnalysisDTO {
 

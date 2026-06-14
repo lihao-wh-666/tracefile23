@@ -1,13 +1,16 @@
+name: exam-system
+
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.36
+    platform: linux/amd64
     container_name: exam-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: exam_db
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_general_ci
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
       TZ: Asia/Shanghai
       LANG: C.UTF-8
     ports:
@@ -15,24 +18,31 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - /etc/localtime:/etc/localtime:ro
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_general_ci
-      - --init-connect='SET NAMES utf8mb4'
+      - --collation-server=utf8mb4_unicode_ci
       - --lower_case_table_names=1
+      - --max_connections=500
+      - --innodb-buffer-pool-size=256M
+      - --slow-query-log=1
+      - --long-query-time=2
     networks:
       - exam-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot123 || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 40s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine
+    platform: linux/amd64
     container_name: exam-redis
     restart: unless-stopped
     environment:
@@ -41,7 +51,7 @@ services:
       - "6379:6379"
     volumes:
       - redis-data:/data
-      - /etc/localtime:/etc/localtime:ro
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
     networks:
       - exam-network
     healthcheck:
@@ -49,27 +59,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 10s
+      start_period: 15s
 
   backend:
     build:
       context: ..
       dockerfile: docker/backend.Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    platform: linux/amd64
     container_name: exam-backend
     restart: unless-stopped
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/exam_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 5
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 20
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 600000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 1800000
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_DATABASE: 0
+      SPRING_REDIS_TIMEOUT: 5000
+      SPRING_REDIS_LETTUCE_POOL_MAX_ACTIVE: 16
+      SPRING_REDIS_LETTUCE_POOL_MAX_IDLE: 8
+      SPRING_REDIS_LETTUCE_POOL_MIN_IDLE: 2
       SERVER_PORT: 6080
+      SERVER_TOMCAT_MAX_THREADS: 200
+      SERVER_TOMCAT_ACCEPT_COUNT: 100
+      SERVER_TOMCAT_MAX_CONNECTIONS: 10000
       TZ: Asia/Shanghai
-      JAVA_OPTS: -Duser.timezone=Asia/Shanghai -Dfile.encoding=UTF-8
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1024m
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/tmp/heapdump.hprof
+        -Duser.timezone=Asia/Shanghai
+        -Dfile.encoding=UTF-8
+        -Djava.security.egd=file:/dev/./urandom
     ports:
       - "6080:6080"
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -77,28 +111,63 @@ services:
         condition: service_healthy
     networks:
       - exam-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:6080/api/auth/public-key || curl -f http://localhost:6080/api/auth/public-key || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   frontend:
     build:
       context: ..
       dockerfile: docker/frontend.Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    platform: linux/amd64
     container_name: exam-frontend
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
     ports:
       - "6070:80"
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - exam-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost/ || curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
 
 volumes:
   mysql-data:
+    driver: local
   redis-data:
+    driver: local
 
 networks:
   exam-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -251,7 +251,7 @@
         <template #header>
           <div class="card-header">
             <span class="card-title">
-              <el-icon style="color: #409eff; margin-right: 4px"><Lightbulb /></el-icon>
+              <el-icon style="color: #409eff; margin-right: 4px"><Star /></el-icon>
               优化建议
             </span>
           </div>
@@ -266,7 +266,7 @@
           >
             <el-card shadow="hover" class="suggestion-item">
               <div class="suggestion-content">
-                <el-icon class="suggestion-icon" :color="getSuggestionIconColor(index)"><Promotion /></el-icon>
+                <el-icon class="suggestion-icon" :color="getSuggestionIconColor(index)"><EditPen /></el-icon>
                 <span>{{ suggestion }}</span>
               </div>
             </el-card>
@@ -283,7 +283,7 @@ import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import {
   DataAnalysis, Document, EditPen, User, CircleCheck, Star, Warning,
-  Search, WarningFilled, Lightbulb, Promotion
+  Search, WarningFilled
 } from '@element-plus/icons-vue'
 import { generateAnalysisReport } from '../../api/questionAnalysis'
 import { getSubjectList } from '../../api/subject'

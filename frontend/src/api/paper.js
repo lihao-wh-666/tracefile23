@@ -23,3 +23,7 @@ export function deletePaper(id) {
 export function publishPaper(id) {
   return request.put(`/paper/${id}/publish`)
 }
+
+export function getPaperList(params) {
+  return request.get('/paper/page', { params })
+}
