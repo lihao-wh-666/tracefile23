@@ -28,7 +28,16 @@ public class AuthController {
     @GetMapping("/public-key")
     public Result<Map<String, String>> getPublicKey() {
         Map<String, String> data = new HashMap<>();
-        data.put("publicKey", rsaConfig.getPublicKeyBase64());
+        String rawKey = rsaConfig.getPublicKeyBase64();
+        StringBuilder pemBuilder = new StringBuilder();
+        pemBuilder.append("-----BEGIN PUBLIC KEY-----\n");
+        int lineLength = 64;
+        for (int i = 0; i < rawKey.length(); i += lineLength) {
+            int end = Math.min(i + lineLength, rawKey.length());
+            pemBuilder.append(rawKey, i, end).append("\n");
+        }
+        pemBuilder.append("-----END PUBLIC KEY-----");
+        data.put("publicKey", pemBuilder.toString());
         return Result.ok(data);
     }
 

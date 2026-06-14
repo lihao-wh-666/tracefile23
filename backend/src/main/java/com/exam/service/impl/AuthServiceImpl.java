@@ -58,7 +58,13 @@ public class AuthServiceImpl implements AuthService {
         String decryptedPassword;
         try {
             decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
+            System.out.println("[DEBUG-login] 密码解密成功. 密文长度=" + dto.getPassword().length() 
+                + ", 明文长度=" + decryptedPassword.length()
+                + ", 明文前3位=" + (decryptedPassword.length() >=3 ? decryptedPassword.substring(0,3) : decryptedPassword)
+                + ", 明文后3位=" + (decryptedPassword.length() >=3 ? decryptedPassword.substring(decryptedPassword.length()-3) : decryptedPassword));
         } catch (Exception e) {
+            System.out.println("[DEBUG-login] 密码解密失败: " + e.getMessage());
+            e.printStackTrace();
             throw new BusinessException("密码解密失败");
         }
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();

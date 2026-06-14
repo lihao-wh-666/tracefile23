@@ -152,9 +152,6 @@ CREATE TABLE `operation_log` (
     INDEX `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='操作日志表';
 
-INSERT INTO `user` (`username`, `password`, `real_name`, `role`, `status`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 1, 1);
-
 INSERT INTO `subject` (`name`, `description`) VALUES
 ('高等数学', '大学高等数学课程，涵盖微积分、极限、导数、积分等核心内容'),
 ('大学英语', '大学英语四级考试相关课程，包含听说读写综合训练'),
