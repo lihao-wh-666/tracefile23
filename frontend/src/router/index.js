@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../components/Layout.vue'
 import { useUserStore } from '../store/user'
+import { usePreferencesStore } from '../store/preferences'
 import errorHandler from '../utils/errorHandler'
 import { startSessionTimeoutCheck, stopSessionTimeoutCheck } from '../utils/sessionTimeout'
 import ErrorBoundary from '../views/error/ErrorBoundary.vue'
@@ -102,6 +103,12 @@ const routes = [
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
         meta: { title: '个人中心', roles: [1, 2, 3] }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/settings/Settings.vue'),
+        meta: { title: '偏好设置', roles: [1, 2, 3] }
       }
     ]
   },
@@ -129,6 +136,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (token && !publicPaths.includes(to.path) && to.name !== 'Error404') {
     const userStore = useUserStore()
+    const preferencesStore = usePreferencesStore()
     if (!userStore.token) {
       userStore.token = token
     }
@@ -140,6 +148,13 @@ router.beforeEach(async (to, from, next) => {
         stopSessionTimeoutCheck()
         next('/login')
         return
+      }
+    }
+    if (!preferencesStore.loaded) {
+      try {
+        await preferencesStore.fetchPreferences()
+      } catch (err) {
+        console.error('Load preferences failed:', err)
       }
     }
 

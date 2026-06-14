@@ -12,6 +12,7 @@
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+            <el-dropdown-item command="settings">偏好设置</el-dropdown-item>
             <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -28,11 +29,12 @@
       </div>
       <el-menu
         :default-active="$route.path"
-        background-color="#304156"
-        text-color="#bfcbd9"
-        active-text-color="#409eff"
+        background-color="var(--bg-sidebar)"
+        text-color="var(--text-sidebar)"
+        active-text-color="var(--text-sidebar-active)"
         router
         @select="handleMenuSelect"
+        class="sidebar-menu"
       >
         <el-menu-item index="/dashboard" v-if="hasRole([1, 2, 3])">
           <el-icon><HomeFilled /></el-icon>
@@ -78,11 +80,38 @@
           <el-icon><Setting /></el-icon>
           <span>个人中心</span>
         </el-menu-item>
+        <el-menu-item index="/settings">
+          <el-icon><MagicStick /></el-icon>
+          <span>偏好设置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
     <el-container class="main-container">
       <el-header class="desktop-header mobile-hidden">
+        <div class="header-left">
+          <el-dropdown trigger="click" @command="handleQuickTheme" class="theme-quick">
+            <span class="header-icon-btn" :title="'切换主题'">
+              <el-icon :size="20">
+                <Sunny v-if="preferencesStore.theme === 'light'" />
+                <Moon v-else />
+              </el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="light">
+                  <el-icon><Sunny /></el-icon>
+                  <span style="margin-left: 6px">亮色模式</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="dark">
+                  <el-icon><Moon /></el-icon>
+                  <span style="margin-left: 6px">暗色模式</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+
         <el-dropdown @command="handleCommand">
           <span class="user-dropdown">
             <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)" class="user-avatar">
@@ -94,6 +123,7 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+              <el-dropdown-item command="settings">偏好设置</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -108,13 +138,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
+import { usePreferencesStore } from '../store/preferences'
 
 const router = useRouter()
 const userStore = useUserStore()
+const preferencesStore = usePreferencesStore()
 const sidebarOpen = ref(false)
 
 const hasRole = (roles) => {
@@ -145,9 +177,21 @@ const handleMenuSelect = () => {
 
 const handleCommand = (command) => {
   if (command === 'logout') {
+    preferencesStore.clearOnLogout()
     userStore.logout()
   } else if (command === 'profile') {
     router.push('/profile')
+  } else if (command === 'settings') {
+    router.push('/settings')
+  }
+}
+
+const handleQuickTheme = async (theme) => {
+  preferencesStore.setTheme(theme)
+  try {
+    await preferencesStore.updatePreferences({ theme })
+  } catch (e) {
+    console.error('Save theme failed:', e)
   }
 }
 
@@ -159,6 +203,9 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  if (preferencesStore.sidebarCollapsed && window.innerWidth > 768) {
+    // 桌面端折叠逻辑可扩展
+  }
 })
 
 onUnmounted(() => {
@@ -172,6 +219,7 @@ onUnmounted(() => {
   height: 100vh;
   width: 100%;
   overflow: hidden;
+  background-color: var(--bg-primary);
 }
 
 .mobile-header {
@@ -180,17 +228,17 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 56px;
-  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  background: var(--gradient-header);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 1001;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-header);
 }
 
 .menu-toggle {
-  color: #fff;
+  color: var(--text-inverse);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -206,14 +254,14 @@ onUnmounted(() => {
 }
 
 .mobile-logo {
-  color: #fff;
+  color: var(--text-inverse);
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 
 .mobile-user {
-  color: #fff;
+  color: var(--text-inverse);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -248,7 +296,7 @@ onUnmounted(() => {
 
 .sidebar {
   width: 220px;
-  background-color: #304156;
+  background-color: var(--bg-sidebar);
   overflow: hidden;
   transition: transform 0.3s ease;
   z-index: 1000;
@@ -262,10 +310,10 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 0 16px;
   height: 56px;
-  color: #fff;
+  color: var(--text-inverse);
   font-size: 16px;
   font-weight: 600;
-  background-color: #263445;
+  background-color: var(--bg-sidebar-hover);
 }
 
 .close-icon {
@@ -274,6 +322,7 @@ onUnmounted(() => {
   padding: 4px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  color: var(--text-inverse);
 }
 
 .close-icon:hover {
@@ -284,16 +333,20 @@ onUnmounted(() => {
   height: 60px;
   line-height: 60px;
   text-align: center;
-  color: #fff;
+  color: var(--text-inverse);
   font-size: 18px;
   font-weight: bold;
-  background-color: #263445;
+  background-color: var(--bg-sidebar-hover);
 }
 
-.el-menu {
+.sidebar-menu {
   border-right: none;
   flex: 1;
   overflow-y: auto;
+}
+
+.sidebar-menu :deep(.el-menu-item:hover) {
+  background-color: var(--bg-sidebar-hover) !important;
 }
 
 .main-container {
@@ -306,11 +359,37 @@ onUnmounted(() => {
 .desktop-header {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  background-color: #fff;
-  border-bottom: 1px solid #e6e6e6;
+  justify-content: space-between;
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-primary);
   height: 60px;
   padding: 0 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-quick {
+  cursor: pointer;
+}
+
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: var(--text-regular);
+  transition: all 0.2s;
+}
+
+.header-icon-btn:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--color-primary);
 }
 
 .user-dropdown {
@@ -319,11 +398,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .user-avatar {
-  border: 2px solid #e4e7ed;
+  border: 2px solid var(--border-primary);
 }
 
 .username-text {
@@ -333,7 +412,7 @@ onUnmounted(() => {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  background-color: #f5f7fa;
+  background-color: var(--bg-primary);
   padding: 16px;
 }
 
@@ -345,7 +424,7 @@ onUnmounted(() => {
     bottom: 0;
     width: 260px;
     transform: translateX(-100%);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-sidebar);
   }
 
   .sidebar.open {
