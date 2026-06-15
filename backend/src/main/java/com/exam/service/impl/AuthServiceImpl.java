@@ -36,7 +36,7 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private RSA rsa;
 
-    @Autowired(required = false)
+    @Autowired
     private StringRedisTemplate redisTemplate;
 
     @Autowired
@@ -56,13 +56,22 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
 
+        int maxErrorCount = systemConfigService.getIntValueByKey(
+                Constants.CONFIG_LOGIN_MAX_ERROR_COUNT,
+                Constants.DEFAULT_LOGIN_MAX_ERROR_COUNT
+        );
+
         String lockKey = Constants.LOGIN_LOCK_PREFIX + user.getId();
-        String lockValue = redisTemplate != null ? redisTemplate.opsForValue().get(lockKey) : null;
-        if (lockValue != null) {
-            long remainSeconds = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
-            long remainMinutes = remainSeconds / 60 + (remainSeconds % 60 > 0 ? 1 : 0);
-            throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
-                    "登录失败次数过多，账号已被锁定，请" + remainMinutes + "分钟后再试");
+        String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
+
+        if (maxErrorCount > 0) {
+            String lockValue = redisTemplate.opsForValue().get(lockKey);
+            if (lockValue != null) {
+                long remainSeconds = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
+                long remainMinutes = remainSeconds / 60 + (remainSeconds % 60 > 0 ? 1 : 0);
+                throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
+                        "登录失败次数过多，账号已被锁定，请" + remainMinutes + "分钟后再试");
+            }
         }
 
         String decryptedPassword;
@@ -73,40 +82,34 @@ public class AuthServiceImpl implements AuthService {
         }
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         if (!encoder.matches(decryptedPassword, user.getPassword())) {
-            int maxErrorCount = systemConfigService.getIntValueByKey(
-                    Constants.CONFIG_LOGIN_MAX_ERROR_COUNT,
-                    Constants.DEFAULT_LOGIN_MAX_ERROR_COUNT
-            );
-            String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
-            String errorCountStr = redisTemplate != null ? redisTemplate.opsForValue().get(errorCountKey) : null;
-            int errorCount = errorCountStr != null ? Integer.parseInt(errorCountStr) + 1 : 1;
+            if (maxErrorCount > 0) {
+                String errorCountStr = redisTemplate.opsForValue().get(errorCountKey);
+                int errorCount = errorCountStr != null ? Integer.parseInt(errorCountStr) + 1 : 1;
 
-            if (errorCount >= maxErrorCount) {
-                int lockDuration = systemConfigService.getIntValueByKey(
-                        Constants.CONFIG_LOGIN_LOCK_DURATION,
-                        Constants.DEFAULT_LOGIN_LOCK_DURATION_MINUTES
-                );
-                if (redisTemplate != null) {
+                if (errorCount >= maxErrorCount) {
+                    int lockDuration = systemConfigService.getIntValueByKey(
+                            Constants.CONFIG_LOGIN_LOCK_DURATION,
+                            Constants.DEFAULT_LOGIN_LOCK_DURATION_MINUTES
+                    );
                     redisTemplate.opsForValue().set(lockKey, String.valueOf(errorCount), lockDuration, TimeUnit.MINUTES);
                     redisTemplate.delete(errorCountKey);
-                }
-                throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
-                        "密码错误次数超过限制，账号已被锁定" + lockDuration + "分钟");
-            } else {
-                if (redisTemplate != null) {
+                    throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
+                            "密码错误次数超过限制，账号已被锁定" + lockDuration + "分钟");
+                } else {
                     redisTemplate.opsForValue().set(errorCountKey, String.valueOf(errorCount), 30, TimeUnit.MINUTES);
+                    int remaining = maxErrorCount - errorCount;
+                    throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR.getCode(),
+                            "用户名或密码错误，还可尝试" + remaining + "次");
                 }
-                int remaining = maxErrorCount - errorCount;
-                throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR.getCode(),
-                        "用户名或密码错误，还可尝试" + remaining + "次");
+            } else {
+                throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
             }
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new BusinessException(ErrorCode.USER_DISABLED);
         }
 
-        String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
-        if (redisTemplate != null) {
+        if (maxErrorCount > 0) {
             redisTemplate.delete(errorCountKey);
         }
 
@@ -199,9 +202,7 @@ public class AuthServiceImpl implements AuthService {
 
         String code = RandomUtil.randomNumbers(6);
 
-        if (redisTemplate != null) {
-            redisTemplate.opsForValue().set(CODE_PREFIX + dto.getEmail(), code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
-        }
+        redisTemplate.opsForValue().set(CODE_PREFIX + dto.getEmail(), code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
 
         System.out.println("验证码已发送至 " + dto.getEmail() + "，验证码为：" + code);
     }
@@ -214,17 +215,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("该邮箱未注册");
         }
 
-        if (redisTemplate != null) {
-            String storedCode = redisTemplate.opsForValue().get(CODE_PREFIX + dto.getEmail());
-            if (storedCode == null || !storedCode.equals(dto.getCode())) {
-                throw new BusinessException("验证码错误或已过期");
-            }
-            redisTemplate.delete(CODE_PREFIX + dto.getEmail());
-        } else {
-            if (!"123456".equals(dto.getCode())) {
-                throw new BusinessException("验证码错误（测试阶段请使用123456）");
-            }
+        String storedCode = redisTemplate.opsForValue().get(CODE_PREFIX + dto.getEmail());
+        if (storedCode == null || !storedCode.equals(dto.getCode())) {
+            throw new BusinessException("验证码错误或已过期");
         }
+        redisTemplate.delete(CODE_PREFIX + dto.getEmail());
 
         String decryptedPassword;
         try {
