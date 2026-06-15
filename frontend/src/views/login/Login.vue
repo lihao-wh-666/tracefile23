@@ -61,7 +61,6 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Reading } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../store/user'
 
 const router = useRouter()
@@ -88,13 +87,6 @@ const handleLogin = async () => {
     await userStore.login(loginForm)
     router.push('/')
   } catch (err) {
-    const msg = err.response?.data?.message || '登录失败，请检查用户名和密码'
-    const code = err.response?.data?.code
-    if (code === 1006) {
-      ElMessage.warning(msg)
-    } else {
-      ElMessage.error(msg)
-    }
   } finally {
     loading.value = false
   }

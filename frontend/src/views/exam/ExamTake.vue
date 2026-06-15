@@ -385,7 +385,6 @@ const handlePause = async () => {
     ElMessage.success('考试已暂停')
   } catch (err) {
     if (err !== 'cancel') {
-      ElMessage.error(err.response?.data?.message || '暂停失败')
     }
   }
 }
@@ -403,7 +402,6 @@ const handleResume = async () => {
     }
     ElMessage.success('已恢复答题')
   } catch (err) {
-    ElMessage.error(err.response?.data?.message || '恢复失败')
   }
 }
 
@@ -472,7 +470,6 @@ const init = async () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
   } catch (err) {
-    ElMessage.error(err.response?.data?.message || '加载考试失败')
     router.push('/exam')
   } finally {
     loading.value = false

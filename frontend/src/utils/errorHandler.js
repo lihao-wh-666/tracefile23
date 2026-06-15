@@ -35,7 +35,7 @@ class ErrorHandler {
       : errorInfo.message
 
     if (showToast) {
-      this.showErrorToast(displayMessage)
+      this.showErrorToast(displayMessage, errorInfo.code)
     }
 
     if (showNotification) {
@@ -148,12 +148,20 @@ class ErrorHandler {
     }))
   }
 
-  showErrorToast(message) {
-    ElMessage.error({
-      message: message,
-      duration: this.toastDuration,
-      showClose: true
-    })
+  showErrorToast(message, code) {
+    if (code === 1006) {
+      ElMessage.warning({
+        message: message,
+        duration: this.toastDuration,
+        showClose: true
+      })
+    } else {
+      ElMessage.error({
+        message: message,
+        duration: this.toastDuration,
+        showClose: true
+      })
+    }
   }
 
   showSuccessToast(message) {

@@ -15,6 +15,7 @@ public class Result<T> {
 
     private Integer code;
     private String msg;
+    private String message;
     private T data;
     private String traceId;
     private String timestamp;
@@ -24,6 +25,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(SUCCESS_CODE);
         result.setMsg("操作成功");
+        result.setMessage("操作成功");
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
     }
@@ -32,6 +34,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(SUCCESS_CODE);
         result.setMsg("操作成功");
+        result.setMessage("操作成功");
         result.setData(data);
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
@@ -41,6 +44,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(SUCCESS_CODE);
         result.setMsg(msg);
+        result.setMessage(msg);
         result.setData(data);
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
@@ -50,6 +54,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(FAIL_CODE);
         result.setMsg("操作失败");
+        result.setMessage("操作失败");
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
@@ -59,6 +64,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(FAIL_CODE);
         result.setMsg(msg);
+        result.setMessage(msg);
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
@@ -68,6 +74,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(code);
         result.setMsg(msg);
+        result.setMessage(msg);
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
         return result;
@@ -77,6 +84,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(code);
         result.setMsg(msg);
+        result.setMessage(msg);
         result.setDetail(detail);
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
@@ -87,6 +95,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(errorCode.getCode());
         result.setMsg(errorCode.getMessage());
+        result.setMessage(errorCode.getMessage());
         result.setDetail(errorCode.getDetail());
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
@@ -97,6 +106,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(errorCode.getCode());
         result.setMsg(errorCode.getMessage());
+        result.setMessage(errorCode.getMessage());
         result.setDetail(detail);
         result.setTraceId(generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));
@@ -107,6 +117,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(e.getCode());
         result.setMsg(e.getMessage());
+        result.setMessage(e.getMessage());
         result.setDetail(e.getDetail());
         result.setTraceId(e.getTraceId() != null ? e.getTraceId() : generateTraceId());
         result.setTimestamp(LocalDateTime.now().format(FORMATTER));

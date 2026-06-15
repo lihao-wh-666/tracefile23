@@ -207,7 +207,6 @@ const handleSendCode = async () => {
       }
     }, 1000)
   } catch (err) {
-    ElMessage.error(err.response?.data?.message || '发送失败，请稍后重试')
   }
 }
 
@@ -230,7 +229,6 @@ const handleResetPassword = async () => {
     ElMessage.success('密码重置成功，请登录')
     router.push('/login')
   } catch (err) {
-    ElMessage.error(err.response?.data?.message || '重置失败，请稍后重试')
   } finally {
     loading.value = false
   }
