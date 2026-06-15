@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.common.BusinessException;
+import com.exam.common.Constants;
 import com.exam.common.ErrorCode;
 import com.exam.dto.ChangePasswordDTO;
 import com.exam.dto.UpdateProfileDTO;
@@ -13,6 +14,7 @@ import com.exam.entity.User;
 import com.exam.mapper.UserMapper;
 import com.exam.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RSA rsa;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @Override
     public IPage<User> page(Integer current, Integer size, String keyword, Integer role, Integer status) {
@@ -117,6 +122,25 @@ public class UserServiceImpl implements UserService {
         user.setId(id);
         user.setStatus(status);
         return userMapper.updateById(user) > 0;
+    }
+
+    @Override
+    public boolean unlockUser(Long id) {
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        String lockKey = Constants.LOGIN_LOCK_PREFIX + id;
+        String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + id;
+        redisTemplate.delete(lockKey);
+        redisTemplate.delete(errorCountKey);
+
+        User updateUser = new User();
+        updateUser.setId(id);
+        updateUser.setLoginLocked(Constants.LOGIN_LOCKED_NO);
+        updateUser.setLockEndTime(null);
+        return userMapper.updateById(updateUser) > 0;
     }
 
     @Override

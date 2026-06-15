@@ -67,6 +67,15 @@ export default {
     errorCount: 'ユーザー名またはパスワードが正しくありません。残り{n}回',
     locked: 'ログイン失敗回数が多すぎます。アカウントは{t}分間ロックされています'
   },
+  user: {
+    locked: 'ロック中',
+    lockedMinutes: 'ロック中（{n}分）',
+    unlock: 'ロック解除',
+    unlockSuccess: 'ロックを解除しました',
+    unlockFailed: 'ロック解除に失敗しました',
+    enable: '有効',
+    disable: '無効'
+  },
   profile: {
     basicInfo: '基本情報',
     avatar: 'アバター設定',

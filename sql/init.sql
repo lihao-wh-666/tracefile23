@@ -26,6 +26,8 @@ CREATE TABLE `user` (
     `email`       VARCHAR(100) DEFAULT NULL,
     `phone`       VARCHAR(20)  DEFAULT NULL,
     `status`      TINYINT      NOT NULL DEFAULT 1 COMMENT '0禁用 1启用',
+    `login_locked` TINYINT      NOT NULL DEFAULT 0 COMMENT '登录锁定状态：0未锁定 1已锁定',
+    `lock_end_time` DATETIME     DEFAULT NULL COMMENT '锁定到期时间',
     `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     TINYINT      NOT NULL DEFAULT 0,

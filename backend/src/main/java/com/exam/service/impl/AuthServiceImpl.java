@@ -22,6 +22,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -65,6 +66,19 @@ public class AuthServiceImpl implements AuthService {
         String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
 
         if (maxErrorCount > 0) {
+            if (user.getLoginLocked() != null && user.getLoginLocked() == Constants.LOGIN_LOCKED_YES
+                    && user.getLockEndTime() != null && user.getLockEndTime().isAfter(LocalDateTime.now())) {
+                java.time.Duration duration = java.time.Duration.between(LocalDateTime.now(), user.getLockEndTime());
+                long remainMinutes = duration.toMinutes() + (duration.getSeconds() % 60 > 0 ? 1 : 0);
+                throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
+                        "登录失败次数过多，账号已被锁定，请" + remainMinutes + "分钟后再试");
+            }
+
+            if (user.getLoginLocked() != null && user.getLoginLocked() == Constants.LOGIN_LOCKED_YES
+                    && (user.getLockEndTime() == null || user.getLockEndTime().isBefore(LocalDateTime.now()))) {
+                clearUserLock(user.getId());
+            }
+
             String lockValue = redisTemplate.opsForValue().get(lockKey);
             if (lockValue != null) {
                 long remainSeconds = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
@@ -93,6 +107,13 @@ public class AuthServiceImpl implements AuthService {
                     );
                     redisTemplate.opsForValue().set(lockKey, String.valueOf(errorCount), lockDuration, TimeUnit.MINUTES);
                     redisTemplate.delete(errorCountKey);
+
+                    User updateUser = new User();
+                    updateUser.setId(user.getId());
+                    updateUser.setLoginLocked(Constants.LOGIN_LOCKED_YES);
+                    updateUser.setLockEndTime(LocalDateTime.now().plusMinutes(lockDuration));
+                    userMapper.updateById(updateUser);
+
                     throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
                             "密码错误次数超过限制，账号已被锁定" + lockDuration + "分钟");
                 } else {
@@ -111,6 +132,9 @@ public class AuthServiceImpl implements AuthService {
 
         if (maxErrorCount > 0) {
             redisTemplate.delete(errorCountKey);
+            if (user.getLoginLocked() != null && user.getLoginLocked() == Constants.LOGIN_LOCKED_YES) {
+                clearUserLock(user.getId());
+            }
         }
 
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
@@ -135,6 +159,19 @@ public class AuthServiceImpl implements AuthService {
         vo.setRole(user.getRole());
         vo.setAvatar(user.getAvatar());
         return vo;
+    }
+
+    private void clearUserLock(Long userId) {
+        String lockKey = Constants.LOGIN_LOCK_PREFIX + userId;
+        redisTemplate.delete(lockKey);
+        String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + userId;
+        redisTemplate.delete(errorCountKey);
+
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setLoginLocked(Constants.LOGIN_LOCKED_NO);
+        updateUser.setLockEndTime(null);
+        userMapper.updateById(updateUser);
     }
 
     @Override

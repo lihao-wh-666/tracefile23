@@ -20,6 +20,8 @@ public interface UserService {
 
     boolean updateStatus(Long id, Integer status);
 
+    boolean unlockUser(Long id);
+
     boolean updateProfile(Long userId, UpdateProfileDTO dto);
 
     boolean changePassword(Long userId, ChangePasswordDTO dto);

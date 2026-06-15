@@ -153,4 +153,11 @@ public class UserController {
         }
         return Result.ok(userService.updateStatus(id, status));
     }
+
+    @PutMapping("/{id}/unlock")
+    @PreAuthorize("hasRole('1')")
+    @Log(module = "用户管理", operation = "解锁用户")
+    public Result<Boolean> unlockUser(@PathVariable Long id) {
+        return Result.ok(userService.unlockUser(id));
+    }
 }

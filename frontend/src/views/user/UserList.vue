@@ -57,21 +57,34 @@
           </el-table-column>
           <el-table-column prop="phone" label="手机号" width="130" align="center" />
           <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="status" label="状态" width="90" align="center">
+          <el-table-column prop="status" label="状态" width="130" align="center">
             <template #default="{ row }">
-              <el-switch
-                v-model="row.status"
-                :active-value="1"
-                :inactive-value="0"
-                :loading="statusLoadingMap[row.id]"
-                @change="(val) => handleStatusChange(row, val)"
-              />
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                <el-switch
+                  v-model="row.status"
+                  :active-value="1"
+                  :inactive-value="0"
+                  :loading="statusLoadingMap[row.id]"
+                  @change="(val) => handleStatusChange(row, val)"
+                />
+                <el-tag v-if="isUserLocked(row)" type="danger" size="small" effect="dark">
+                  已锁定({{ getLockRemainMinutes(row) }}分钟)
+                </el-tag>
+              </div>
             </template>
           </el-table-column>
           <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
-          <el-table-column label="操作" width="140" align="center" fixed="right">
+          <el-table-column label="操作" width="180" align="center" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+              <el-button
+                v-if="isUserLocked(row)"
+                type="warning"
+                link
+                size="small"
+                :loading="unlockLoadingMap[row.id]"
+                @click="handleUnlock(row)"
+              >解锁</el-button>
               <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
@@ -96,6 +109,9 @@
           <div class="item-left">
             <span class="item-username">{{ item.username }}</span>
             <el-tag :type="roleTagMap[item.role]" size="small">{{ roleMap[item.role] }}</el-tag>
+            <el-tag v-if="isUserLocked(item)" type="danger" size="small" effect="dark">
+              已锁定({{ getLockRemainMinutes(item) }}分钟)
+            </el-tag>
           </div>
           <el-switch
             v-model="item.status"
@@ -122,6 +138,13 @@
         </div>
         <div class="item-actions">
           <el-button type="primary" size="small" @click="handleEdit(item)">编辑</el-button>
+          <el-button
+            v-if="isUserLocked(item)"
+            type="warning"
+            size="small"
+            :loading="unlockLoadingMap[item.id]"
+            @click="handleUnlock(item)"
+          >解锁</el-button>
           <el-button type="danger" size="small" @click="handleDelete(item)">删除</el-button>
         </div>
       </div>
@@ -162,7 +185,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import {
@@ -171,18 +194,36 @@ import {
   addUser,
   updateUser,
   deleteUser,
-  updateUserStatus
+  updateUserStatus,
+  unlockUser
 } from '../../api/user'
 import { getPublicKey } from '../../api/auth'
 import { encryptPassword } from '../../utils/rsa'
 
 const roleMap = { 1: '管理员', 2: '教师', 3: '学生' }
 const roleTagMap = { 1: 'danger', 2: 'warning', 3: 'info' }
+const statusLoadingMap = reactive({})
+const unlockLoadingMap = reactive({})
+const refreshTick = ref(0)
+let refreshTimer = null
 
-const searchForm = reactive({ keyword: '', role: '', status: '' })
+const isUserLocked = (row) => {
+  if (row.loginLocked === 1 && row.lockEndTime) {
+    return new Date(row.lockEndTime) > new Date()
+  }
+  return false
+}
+
+const getLockRemainMinutes = (row) => {
+  refreshTick.value
+  if (!row.lockEndTime) return 0
+  const diff = new Date(row.lockEndTime) - new Date()
+  if (diff <= 0) return 0
+  return Math.ceil(diff / 60000)
+}
+
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 const tableData = ref([])
-const statusLoadingMap = reactive({})
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增用户')
@@ -334,9 +375,33 @@ const handleStatusChange = async (row, status) => {
   }
 }
 
+const handleUnlock = async (row) => {
+  unlockLoadingMap[row.id] = true
+  try {
+    await unlockUser(row.id)
+    row.loginLocked = 0
+    row.lockEndTime = null
+    ElMessage.success('解锁成功')
+  } catch (err) {
+    ElMessage.error(err?.message || '解锁失败')
+  } finally {
+    unlockLoadingMap[row.id] = false
+  }
+}
+
 onMounted(() => {
   fetchPublicKey()
   fetchData()
+  refreshTimer = setInterval(() => {
+    refreshTick.value++
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
 })
 </script>
 

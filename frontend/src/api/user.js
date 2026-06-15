@@ -41,3 +41,7 @@ export function deleteUser(id) {
 export function updateUserStatus(id, status) {
   return request.put(`/user/${id}/status`, null, { params: { status } })
 }
+
+export function unlockUser(id) {
+  return request.put(`/user/${id}/unlock`)
+}

@@ -67,6 +67,15 @@ export default {
     errorCount: '用户名或密码错误，还可尝试{n}次',
     locked: '登录失败次数过多，账号已被锁定，请{t}分钟后再试'
   },
+  user: {
+    locked: '已锁定',
+    lockedMinutes: '已锁定({n}分钟)',
+    unlock: '解锁',
+    unlockSuccess: '解锁成功',
+    unlockFailed: '解锁失败',
+    enable: '启用',
+    disable: '禁用'
+  },
   profile: {
     basicInfo: '基本信息',
     avatar: '头像设置',

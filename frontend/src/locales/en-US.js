@@ -67,6 +67,15 @@ export default {
     errorCount: 'Incorrect username or password, {n} attempts remaining',
     locked: 'Too many failed attempts, account locked for {t} minutes'
   },
+  user: {
+    locked: 'Locked',
+    lockedMinutes: 'Locked ({n} min)',
+    unlock: 'Unlock',
+    unlockSuccess: 'Unlocked successfully',
+    unlockFailed: 'Unlock failed',
+    enable: 'Enable',
+    disable: 'Disable'
+  },
   profile: {
     basicInfo: 'Basic Info',
     avatar: 'Avatar',

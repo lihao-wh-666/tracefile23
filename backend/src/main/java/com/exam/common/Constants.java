@@ -24,6 +24,9 @@ public class Constants {
     public static final int USER_STATUS_ENABLED = 1;
     public static final int USER_STATUS_DISABLED = 0;
 
+    public static final int LOGIN_LOCKED_NO = 0;
+    public static final int LOGIN_LOCKED_YES = 1;
+
     public static final String CONFIG_LOGIN_TIMEOUT = "login.timeout.minutes";
     public static final int DEFAULT_LOGIN_TIMEOUT_MINUTES = 30;
 
