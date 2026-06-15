@@ -63,7 +63,9 @@ export default {
     login: 'Login',
     register: 'Register',
     forgotPassword: 'Forgot Password',
-    rememberMe: 'Remember me'
+    rememberMe: 'Remember me',
+    errorCount: 'Incorrect username or password, {n} attempts remaining',
+    locked: 'Too many failed attempts, account locked for {t} minutes'
   },
   profile: {
     basicInfo: 'Basic Info',

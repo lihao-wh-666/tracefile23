@@ -63,7 +63,9 @@ export default {
     login: 'ログイン',
     register: '登録',
     forgotPassword: 'パスワードを忘れた',
-    rememberMe: 'ログイン状態を保持'
+    rememberMe: 'ログイン状態を保持',
+    errorCount: 'ユーザー名またはパスワードが正しくありません。残り{n}回',
+    locked: 'ログイン失敗回数が多すぎます。アカウントは{t}分間ロックされています'
   },
   profile: {
     basicInfo: '基本情報',

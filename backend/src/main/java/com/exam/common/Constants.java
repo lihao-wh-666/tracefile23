@@ -27,7 +27,15 @@ public class Constants {
     public static final String CONFIG_LOGIN_TIMEOUT = "login.timeout.minutes";
     public static final int DEFAULT_LOGIN_TIMEOUT_MINUTES = 30;
 
+    public static final String CONFIG_LOGIN_MAX_ERROR_COUNT = "login.max.error.count";
+    public static final int DEFAULT_LOGIN_MAX_ERROR_COUNT = 5;
+
+    public static final String CONFIG_LOGIN_LOCK_DURATION = "login.lock.duration.minutes";
+    public static final int DEFAULT_LOGIN_LOCK_DURATION_MINUTES = 30;
+
     public static final String SESSION_LAST_ACTIVITY_PREFIX = "session:last-activity:";
+    public static final String LOGIN_ERROR_COUNT_PREFIX = "login:error:count:";
+    public static final String LOGIN_LOCK_PREFIX = "login:lock:";
 
     public static final int CONFIG_VALUE_TYPE_STRING = 1;
     public static final int CONFIG_VALUE_TYPE_INTEGER = 2;

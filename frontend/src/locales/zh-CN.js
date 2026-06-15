@@ -63,7 +63,9 @@ export default {
     login: '登录',
     register: '注册',
     forgotPassword: '忘记密码',
-    rememberMe: '记住我'
+    rememberMe: '记住我',
+    errorCount: '用户名或密码错误，还可尝试{n}次',
+    locked: '登录失败次数过多，账号已被锁定，请{t}分钟后再试'
   },
   profile: {
     basicInfo: '基本信息',

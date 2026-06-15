@@ -55,25 +55,61 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
         }
+
+        String lockKey = Constants.LOGIN_LOCK_PREFIX + user.getId();
+        String lockValue = redisTemplate != null ? redisTemplate.opsForValue().get(lockKey) : null;
+        if (lockValue != null) {
+            long remainSeconds = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
+            long remainMinutes = remainSeconds / 60 + (remainSeconds % 60 > 0 ? 1 : 0);
+            throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
+                    "登录失败次数过多，账号已被锁定，请" + remainMinutes + "分钟后再试");
+        }
+
         String decryptedPassword;
         try {
             decryptedPassword = rsa.decryptStr(dto.getPassword(), cn.hutool.crypto.asymmetric.KeyType.PrivateKey);
-            System.out.println("[DEBUG-login] 密码解密成功. 密文长度=" + dto.getPassword().length() 
-                + ", 明文长度=" + decryptedPassword.length()
-                + ", 明文前3位=" + (decryptedPassword.length() >=3 ? decryptedPassword.substring(0,3) : decryptedPassword)
-                + ", 明文后3位=" + (decryptedPassword.length() >=3 ? decryptedPassword.substring(decryptedPassword.length()-3) : decryptedPassword));
         } catch (Exception e) {
-            System.out.println("[DEBUG-login] 密码解密失败: " + e.getMessage());
-            e.printStackTrace();
             throw new BusinessException("密码解密失败");
         }
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         if (!encoder.matches(decryptedPassword, user.getPassword())) {
-            throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR);
+            int maxErrorCount = systemConfigService.getIntValueByKey(
+                    Constants.CONFIG_LOGIN_MAX_ERROR_COUNT,
+                    Constants.DEFAULT_LOGIN_MAX_ERROR_COUNT
+            );
+            String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
+            String errorCountStr = redisTemplate != null ? redisTemplate.opsForValue().get(errorCountKey) : null;
+            int errorCount = errorCountStr != null ? Integer.parseInt(errorCountStr) + 1 : 1;
+
+            if (errorCount >= maxErrorCount) {
+                int lockDuration = systemConfigService.getIntValueByKey(
+                        Constants.CONFIG_LOGIN_LOCK_DURATION,
+                        Constants.DEFAULT_LOGIN_LOCK_DURATION_MINUTES
+                );
+                if (redisTemplate != null) {
+                    redisTemplate.opsForValue().set(lockKey, String.valueOf(errorCount), lockDuration, TimeUnit.MINUTES);
+                    redisTemplate.delete(errorCountKey);
+                }
+                throw new BusinessException(ErrorCode.USER_LOGIN_LOCKED.getCode(),
+                        "密码错误次数超过限制，账号已被锁定" + lockDuration + "分钟");
+            } else {
+                if (redisTemplate != null) {
+                    redisTemplate.opsForValue().set(errorCountKey, String.valueOf(errorCount), 30, TimeUnit.MINUTES);
+                }
+                int remaining = maxErrorCount - errorCount;
+                throw new BusinessException(ErrorCode.USER_PASSWORD_ERROR.getCode(),
+                        "用户名或密码错误，还可尝试" + remaining + "次");
+            }
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new BusinessException(ErrorCode.USER_DISABLED);
         }
+
+        String errorCountKey = Constants.LOGIN_ERROR_COUNT_PREFIX + user.getId();
+        if (redisTemplate != null) {
+            redisTemplate.delete(errorCountKey);
+        }
+
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
 
         int timeoutMinutes = systemConfigService.getIntValueByKey(

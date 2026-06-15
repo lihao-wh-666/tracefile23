@@ -17,6 +17,7 @@ public enum ErrorCode {
     USER_ALREADY_EXIST(1003, "用户已存在", "该用户名或邮箱已被注册", ErrorCategory.BUSINESS),
     USER_DISABLED(1004, "用户已被禁用", "该账号已被管理员禁用，请联系管理员", ErrorCategory.BUSINESS),
     USER_PASSWORD_SAME(1005, "新密码不能与旧密码相同", "请输入与旧密码不同的新密码", ErrorCategory.BUSINESS),
+    USER_LOGIN_LOCKED(1006, "登录失败次数过多，账号已被锁定", "密码错误次数超过限制，账号已被临时锁定，请稍后再试", ErrorCategory.BUSINESS),
 
     TOKEN_INVALID(2001, "Token无效", "Token格式不正确或已被篡改", ErrorCategory.AUTH),
     TOKEN_EXPIRED(2002, "Token已过期", "登录状态已过期，请重新登录", ErrorCategory.AUTH),
