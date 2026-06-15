@@ -4,16 +4,16 @@
       <div class="menu-toggle" @click="toggleSidebar">
         <el-icon :size="24"><Menu /></el-icon>
       </div>
-      <div class="mobile-logo">在线考试系统</div>
+      <div class="mobile-logo">{{ t('login.title') }}</div>
       <el-dropdown @command="handleCommand" class="mobile-user">
         <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)">
           <el-icon :size="18"><UserFilled /></el-icon>
         </el-avatar>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-            <el-dropdown-item command="settings">偏好设置</el-dropdown-item>
-            <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+            <el-dropdown-item command="profile">{{ t('menu.profile') }}</el-dropdown-item>
+            <el-dropdown-item command="settings">{{ t('menu.settings') }}</el-dropdown-item>
+            <el-dropdown-item command="logout" divided>{{ t('profile.logout') }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -22,9 +22,9 @@
     <div class="sidebar-overlay" :class="{ active: sidebarOpen }" @click="closeSidebar"></div>
 
     <el-aside class="sidebar" :class="{ open: sidebarOpen }">
-      <div class="logo mobile-hidden">在线考试系统</div>
+      <div class="logo mobile-hidden">{{ t('login.title') }}</div>
       <div class="mobile-only sidebar-logo">
-        <span>在线考试系统</span>
+        <span>{{ t('login.title') }}</span>
         <el-icon @click="closeSidebar" class="close-icon"><Close /></el-icon>
       </div>
       <el-menu
@@ -38,51 +38,51 @@
       >
         <el-menu-item index="/dashboard" v-if="hasRole([1, 2, 3])">
           <el-icon><HomeFilled /></el-icon>
-          <span>首页</span>
+          <span>{{ t('menu.dashboard') }}</span>
         </el-menu-item>
         <el-menu-item index="/question" v-if="hasRole([1, 2])">
           <el-icon><Document /></el-icon>
-          <span>题库管理</span>
+          <span>{{ t('menu.question') }}</span>
         </el-menu-item>
         <el-menu-item index="/subject" v-if="hasRole([1, 2])">
           <el-icon><Reading /></el-icon>
-          <span>科目管理</span>
+          <span>{{ t('menu.subject') }}</span>
         </el-menu-item>
         <el-menu-item index="/paper" v-if="hasRole([1, 2])">
           <el-icon><Notebook /></el-icon>
-          <span>试卷管理</span>
+          <span>{{ t('menu.paper') }}</span>
         </el-menu-item>
         <el-menu-item index="/exam" v-if="hasRole([1, 2, 3])">
           <el-icon><EditPen /></el-icon>
-          <span>考试管理</span>
+          <span>{{ t('menu.exam') }}</span>
         </el-menu-item>
         <el-menu-item index="/score" v-if="hasRole([1, 2])">
           <el-icon><DataAnalysis /></el-icon>
-          <span>成绩统计</span>
+          <span>{{ t('menu.score') }}</span>
         </el-menu-item>
         <el-menu-item index="/question-analysis" v-if="hasRole([1, 2])">
           <el-icon><TrendCharts /></el-icon>
-          <span>题目数据分析</span>
+          <span>{{ t('menu.questionAnalysis') }}</span>
         </el-menu-item>
         <el-menu-item index="/personal-score" v-if="hasRole([1, 2, 3])">
           <el-icon><User /></el-icon>
-          <span>个人成绩台账</span>
+          <span>{{ t('menu.personalScore') }}</span>
         </el-menu-item>
         <el-menu-item index="/user" v-if="hasRole([1])">
           <el-icon><UserFilled /></el-icon>
-          <span>用户管理</span>
+          <span>{{ t('menu.user') }}</span>
         </el-menu-item>
         <el-menu-item index="/system-config" v-if="hasRole([1])">
           <el-icon><Tools /></el-icon>
-          <span>系统参数管理</span>
+          <span>{{ t('menu.systemConfig') }}</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><Setting /></el-icon>
-          <span>个人中心</span>
+          <span>{{ t('menu.profile') }}</span>
         </el-menu-item>
         <el-menu-item index="/settings">
           <el-icon><MagicStick /></el-icon>
-          <span>偏好设置</span>
+          <span>{{ t('menu.settings') }}</span>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -91,7 +91,7 @@
       <el-header class="desktop-header mobile-hidden">
         <div class="header-left">
           <el-dropdown trigger="click" @command="handleQuickTheme" class="theme-quick">
-            <span class="header-icon-btn" :title="'切换主题'">
+            <span class="header-icon-btn" :title="t('settings.theme')">
               <el-icon :size="20">
                 <Sunny v-if="preferencesStore.theme === 'light'" />
                 <Moon v-else />
@@ -101,11 +101,11 @@
               <el-dropdown-menu>
                 <el-dropdown-item command="light">
                   <el-icon><Sunny /></el-icon>
-                  <span style="margin-left: 6px">亮色模式</span>
+                  <span style="margin-left: 6px">{{ t('settings.themeLight') }}</span>
                 </el-dropdown-item>
                 <el-dropdown-item command="dark">
                   <el-icon><Moon /></el-icon>
-                  <span style="margin-left: 6px">暗色模式</span>
+                  <span style="margin-left: 6px">{{ t('settings.themeDark') }}</span>
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -117,14 +117,14 @@
             <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)" class="user-avatar">
               <el-icon :size="18"><UserFilled /></el-icon>
             </el-avatar>
-            <span class="username-text">{{ userStore.userInfo?.username || '用户' }}</span>
+            <span class="username-text">{{ userStore.userInfo?.username || t('profile.user') }}</span>
             <el-icon><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="settings">偏好设置</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              <el-dropdown-item command="profile">{{ t('menu.profile') }}</el-dropdown-item>
+              <el-dropdown-item command="settings">{{ t('menu.settings') }}</el-dropdown-item>
+              <el-dropdown-item command="logout" divided>{{ t('profile.logout') }}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -140,10 +140,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 import { usePreferencesStore } from '../store/preferences'
 
+const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const preferencesStore = usePreferencesStore()

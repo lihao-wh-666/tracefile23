@@ -23,6 +23,7 @@ export default {
     subject: '科目管理',
     paper: '試験用紙管理',
     exam: '試験管理',
+    examTake: '試験受験',
     score: '成績統計',
     questionAnalysis: '問題分析',
     personalScore: '個人成績',
@@ -36,11 +37,14 @@ export default {
     theme: 'テーマ',
     themeLight: 'ライトモード',
     themeDark: 'ダークモード',
+    themeDesc: 'お好みのテーマを選択してください',
     language: '言語',
+    languageDesc: '表示言語を選択してください',
     languageZhCN: '简体中文',
     languageEnUS: 'English',
     languageJaJP: '日本語',
     sidebar: 'サイドバー',
+    sidebarDesc: 'サイドバーのデフォルト表示を調整',
     sidebarCollapsed: 'サイドバーをデフォルトで折りたたむ',
     save: '設定を保存',
     reset: 'デフォルトに戻す',
@@ -76,6 +80,8 @@ export default {
     oldPassword: '現在のパスワード',
     newPassword: '新しいパスワード',
     confirmPassword: '新しいパスワード（確認）',
-    changePassword: 'パスワードを変更'
+    changePassword: 'パスワードを変更',
+    logout: 'ログアウト',
+    user: 'ユーザー'
   }
 }

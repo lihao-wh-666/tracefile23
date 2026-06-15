@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../components/Layout.vue'
 import { useUserStore } from '../store/user'
 import { usePreferencesStore } from '../store/preferences'
+import i18n from '../locales'
 import errorHandler from '../utils/errorHandler'
 import { startSessionTimeoutCheck, stopSessionTimeoutCheck } from '../utils/sessionTimeout'
 import ErrorBoundary from '../views/error/ErrorBoundary.vue'
@@ -36,79 +37,79 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('../views/dashboard/Dashboard.vue'),
-        meta: { title: '首页', roles: [1, 2, 3] }
+        meta: { title: 'dashboard', roles: [1, 2, 3] }
       },
       {
         path: 'question',
         name: 'QuestionList',
         component: () => import('../views/question/QuestionList.vue'),
-        meta: { title: '题库管理', roles: [1, 2] }
+        meta: { title: 'question', roles: [1, 2] }
       },
       {
         path: 'subject',
         name: 'SubjectList',
         component: () => import('../views/subject/SubjectList.vue'),
-        meta: { title: '科目管理', roles: [1, 2] }
+        meta: { title: 'subject', roles: [1, 2] }
       },
       {
         path: 'paper',
         name: 'PaperList',
         component: () => import('../views/paper/PaperList.vue'),
-        meta: { title: '试卷管理', roles: [1, 2] }
+        meta: { title: 'paper', roles: [1, 2] }
       },
       {
         path: 'exam',
         name: 'ExamList',
         component: () => import('../views/exam/ExamList.vue'),
-        meta: { title: '考试管理', roles: [1, 2, 3] }
+        meta: { title: 'exam', roles: [1, 2, 3] }
       },
       {
         path: 'exam/take/:id',
         name: 'ExamTake',
         component: () => import('../views/exam/ExamTake.vue'),
-        meta: { title: '参加考试', roles: [1, 2, 3] }
+        meta: { title: 'examTake', roles: [1, 2, 3] }
       },
       {
         path: 'score',
         name: 'ScoreList',
         component: () => import('../views/score/ScoreList.vue'),
-        meta: { title: '成绩统计', roles: [1, 2] }
+        meta: { title: 'score', roles: [1, 2] }
       },
       {
         path: 'personal-score',
         name: 'PersonalScore',
         component: () => import('../views/score/PersonalScore.vue'),
-        meta: { title: '个人成绩台账', roles: [1, 2, 3] }
+        meta: { title: 'personalScore', roles: [1, 2, 3] }
       },
       {
         path: 'question-analysis',
         name: 'QuestionAnalysis',
         component: () => import('../views/questionAnalysis/QuestionAnalysis.vue'),
-        meta: { title: '题目数据分析', roles: [1, 2] }
+        meta: { title: 'questionAnalysis', roles: [1, 2] }
       },
       {
         path: 'user',
         name: 'UserList',
         component: () => import('../views/user/UserList.vue'),
-        meta: { title: '用户管理', roles: [1] }
+        meta: { title: 'user', roles: [1] }
       },
       {
         path: 'system-config',
         name: 'SystemConfigList',
         component: () => import('../views/systemConfig/SystemConfigList.vue'),
-        meta: { title: '系统参数管理', roles: [1] }
+        meta: { title: 'systemConfig', roles: [1] }
       },
       {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
-        meta: { title: '个人中心', roles: [1, 2, 3] }
+        meta: { title: 'profile', roles: [1, 2, 3] }
       },
       {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/settings/Settings.vue'),
-        meta: { title: '偏好设置', roles: [1, 2, 3] }
+        meta: { title: 'settings', roles: [1, 2, 3] }
       }
     ]
   },
@@ -178,10 +179,13 @@ router.afterEach((to, from, failure) => {
   if (failure) {
     errorHandler.handleRouterError(failure, to, from)
   }
+  const systemName = i18n.global.t('login.title')
   if (to.meta?.title) {
-    document.title = to.meta.title + ' - 在线考试系统'
+    const titleKey = `menu.${to.meta.title}`
+    const pageTitle = i18n.global.te(titleKey) ? i18n.global.t(titleKey) : to.meta.title
+    document.title = pageTitle + ' - ' + systemName
   } else {
-    document.title = '在线考试系统'
+    document.title = systemName
   }
 })
 

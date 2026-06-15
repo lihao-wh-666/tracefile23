@@ -23,6 +23,7 @@ export default {
     subject: '科目管理',
     paper: '试卷管理',
     exam: '考试管理',
+    examTake: '参加考试',
     score: '成绩统计',
     questionAnalysis: '题目数据分析',
     personalScore: '个人成绩台账',
@@ -36,11 +37,14 @@ export default {
     theme: '界面主题',
     themeLight: '亮色模式',
     themeDark: '暗色模式',
+    themeDesc: '选择您喜欢的界面主题',
     language: '语言设置',
+    languageDesc: '选择界面显示语言',
     languageZhCN: '简体中文',
     languageEnUS: 'English',
     languageJaJP: '日本語',
     sidebar: '侧边栏设置',
+    sidebarDesc: '调整侧边栏的默认显示方式',
     sidebarCollapsed: '默认折叠侧边栏',
     save: '保存设置',
     reset: '恢复默认',
@@ -76,6 +80,8 @@ export default {
     oldPassword: '旧密码',
     newPassword: '新密码',
     confirmPassword: '确认新密码',
-    changePassword: '修改密码'
+    changePassword: '修改密码',
+    logout: '退出登录',
+    user: '用户'
   }
 }

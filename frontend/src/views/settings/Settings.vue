@@ -15,7 +15,7 @@
           <div class="setting-section">
             <div class="setting-label">
               <div class="setting-title">{{ t('settings.theme') }}</div>
-              <div class="setting-desc">选择您喜欢的界面主题</div>
+              <div class="setting-desc">{{ t('settings.themeDesc') }}</div>
             </div>
             <div class="theme-options">
               <div
@@ -69,7 +69,7 @@
           <div class="setting-section">
             <div class="setting-label">
               <div class="setting-title">{{ t('settings.language') }}</div>
-              <div class="setting-desc">选择界面显示语言</div>
+              <div class="setting-desc">{{ t('settings.languageDesc') }}</div>
             </div>
             <el-radio-group v-model="localLanguage" class="language-group">
               <el-radio-button label="zh-CN">
@@ -99,7 +99,7 @@
           <div class="setting-section">
             <div class="setting-label">
               <div class="setting-title">{{ t('settings.sidebar') }}</div>
-              <div class="setting-desc">调整侧边栏的默认显示方式</div>
+              <div class="setting-desc">{{ t('settings.sidebarDesc') }}</div>
             </div>
             <el-switch
               v-model="localSidebarCollapsed"

@@ -23,6 +23,7 @@ export default {
     subject: 'Subjects',
     paper: 'Papers',
     exam: 'Exams',
+    examTake: 'Take Exam',
     score: 'Score Statistics',
     questionAnalysis: 'Question Analysis',
     personalScore: 'My Scores',
@@ -36,11 +37,14 @@ export default {
     theme: 'Theme',
     themeLight: 'Light Mode',
     themeDark: 'Dark Mode',
+    themeDesc: 'Choose your preferred theme',
     language: 'Language',
+    languageDesc: 'Select the display language',
     languageZhCN: '简体中文',
     languageEnUS: 'English',
     languageJaJP: '日本語',
     sidebar: 'Sidebar',
+    sidebarDesc: 'Adjust the default sidebar display',
     sidebarCollapsed: 'Collapse Sidebar by Default',
     save: 'Save Settings',
     reset: 'Reset to Default',
@@ -76,6 +80,8 @@ export default {
     oldPassword: 'Old Password',
     newPassword: 'New Password',
     confirmPassword: 'Confirm New Password',
-    changePassword: 'Change Password'
+    changePassword: 'Change Password',
+    logout: 'Logout',
+    user: 'User'
   }
 }

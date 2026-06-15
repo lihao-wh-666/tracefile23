@@ -11,3 +11,4 @@ export function saveUserPreference(data) {
 export function resetUserPreference() {
   return request.post('/user-preference/reset')
 }
+

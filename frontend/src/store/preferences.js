@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { getUserPreference, saveUserPreference, resetUserPreference } from '../api/userPreference'
-import { setLocale, getLocale } from '../locales'
+import { getUserPreference, saveUserPreference } from '../api/userPreference'
+import { setLocale } from '../locales'
 
 const DEFAULT_PREFERENCES = {
   theme: 'light',
@@ -23,6 +23,13 @@ const applySidebar = (collapsed) => {
   localStorage.setItem('preferences_sidebar_collapsed', collapsed ? '1' : '0')
 }
 
+const normalizeSidebar = (val) => {
+  if (typeof val === 'boolean') return val ? 1 : 0
+  if (val === '1' || val === 'true') return 1
+  if (val === '0' || val === 'false') return 0
+  return val ? 1 : 0
+}
+
 export const usePreferencesStore = defineStore('preferences', {
   state: () => ({
     preferences: { ...DEFAULT_PREFERENCES },
@@ -32,13 +39,7 @@ export const usePreferencesStore = defineStore('preferences', {
   getters: {
     theme: (state) => state.preferences.theme || 'light',
     language: (state) => state.preferences.language || 'zh-CN',
-    sidebarCollapsed: (state) => {
-      const stored = localStorage.getItem('preferences_sidebar_collapsed')
-      if (stored !== null) {
-        return stored === '1'
-      }
-      return state.preferences.sidebarCollapsed === 1
-    }
+    sidebarCollapsed: (state) => state.preferences.sidebarCollapsed === 1
   },
 
   actions: {
@@ -52,8 +53,9 @@ export const usePreferencesStore = defineStore('preferences', {
         this.preferences.language = prefs.language
       }
       if (prefs.sidebarCollapsed !== undefined && prefs.sidebarCollapsed !== null) {
-        applySidebar(prefs.sidebarCollapsed === 1)
-        this.preferences.sidebarCollapsed = prefs.sidebarCollapsed
+        const normalized = normalizeSidebar(prefs.sidebarCollapsed)
+        applySidebar(normalized === 1)
+        this.preferences.sidebarCollapsed = normalized
       }
       if (prefs.extraConfig !== undefined) {
         this.preferences.extraConfig = prefs.extraConfig
@@ -68,7 +70,7 @@ export const usePreferencesStore = defineStore('preferences', {
       const localPrefs = { ...DEFAULT_PREFERENCES }
       if (savedTheme) localPrefs.theme = savedTheme
       if (savedLanguage) localPrefs.language = savedLanguage
-      if (savedSidebar) localPrefs.sidebarCollapsed = savedSidebar === '1' ? 1 : 0
+      if (savedSidebar !== null) localPrefs.sidebarCollapsed = savedSidebar === '1' ? 1 : 0
 
       this.applyPreferences(localPrefs)
       return localPrefs
@@ -91,16 +93,17 @@ export const usePreferencesStore = defineStore('preferences', {
     },
 
     async updatePreferences(newPrefs) {
-      const toSave = { ...this.preferences, ...newPrefs }
+      const merged = { ...this.preferences, ...newPrefs }
+      const toSave = {
+        theme: merged.theme,
+        language: merged.language,
+        sidebarCollapsed: normalizeSidebar(merged.sidebarCollapsed),
+        extraConfig: merged.extraConfig
+      }
       this.applyPreferences(toSave)
 
       try {
-        await saveUserPreference({
-          theme: toSave.theme,
-          language: toSave.language,
-          sidebarCollapsed: toSave.sidebarCollapsed,
-          extraConfig: toSave.extraConfig
-        })
+        await saveUserPreference(toSave)
         return true
       } catch (err) {
         console.error('Failed to save preferences:', err)
@@ -119,14 +122,16 @@ export const usePreferencesStore = defineStore('preferences', {
     },
 
     setSidebarCollapsed(collapsed) {
-      applySidebar(collapsed)
-      this.preferences.sidebarCollapsed = collapsed ? 1 : 0
+      const normalized = normalizeSidebar(collapsed)
+      applySidebar(normalized === 1)
+      this.preferences.sidebarCollapsed = normalized
     },
 
     async resetToDefault() {
+      const defaults = { ...DEFAULT_PREFERENCES }
+      this.applyPreferences(defaults)
       try {
-        await resetUserPreference()
-        this.applyPreferences({ ...DEFAULT_PREFERENCES })
+        await saveUserPreference(defaults)
         return true
       } catch (err) {
         console.error('Failed to reset preferences:', err)
