@@ -31,6 +31,16 @@ public class ExamRecord {
 
     private Integer totalPauseTime;
 
+    private Integer switchCount;
+
+    private Integer totalSwitchDuration;
+
+    private Integer screenshotCount;
+
+    private Integer screenRecordCount;
+
+    private Integer warningCount;
+
     private String questionOrder;
 
     private LocalDateTime lastPauseTime;

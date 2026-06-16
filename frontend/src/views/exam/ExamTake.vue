@@ -1,5 +1,30 @@
 <template>
   <div v-loading="loading" class="exam-take">
+    <div v-if="showWarning" class="warning-overlay">
+      <div class="warning-content">
+        <el-icon class="warning-icon"><Warning /></el-icon>
+        <h3>考试警告</h3>
+        <p class="warning-message">{{ currentWarning?.message }}</p>
+        <div class="warning-stats">
+          <div class="stat-item">
+            <span class="stat-label">警告次数</span>
+            <span class="stat-value warning">{{ currentWarning?.count || 0 }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">切屏次数</span>
+            <span class="stat-value">{{ currentWarning?.switchCount || 0 }}/{{ maxSwitchCount }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">累计切屏</span>
+            <span class="stat-value">{{ currentWarning?.totalSwitchDuration || 0 }}s/{{ maxTotalSwitchDuration }}s</span>
+          </div>
+        </div>
+        <el-button type="primary" size="large" @click="acknowledgeWarning">
+          我已知晓，继续答题
+        </el-button>
+      </div>
+    </div>
+
     <div v-if="isPaused" class="pause-overlay">
       <div class="pause-content">
         <el-icon class="pause-icon"><VideoPause /></el-icon>
@@ -11,6 +36,63 @@
         </el-button>
       </div>
     </div>
+
+    <el-dialog
+      v-model="showMonitorInfo"
+      title="考试监控状态"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <div class="monitor-stats">
+        <div class="monitor-stat">
+          <el-icon color="#409eff"><Monitor /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">监控状态</span>
+            <span class="stat-value" :class="monitorStats.isMonitoring ? 'active' : 'inactive'">
+              {{ monitorStats.isMonitoring ? '运行中' : '已停止' }}
+            </span>
+          </div>
+        </div>
+        <div class="monitor-stat">
+          <el-icon color="#e6a23c"><SwitchButton /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">切屏次数</span>
+            <span class="stat-value">{{ monitorStats.switchCount }} / {{ monitorStats.maxSwitchCount }}</span>
+          </div>
+        </div>
+        <div class="monitor-stat">
+          <el-icon color="#67c23a"><Clock /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">累计切屏时长</span>
+            <span class="stat-value">{{ monitorStats.totalSwitchDuration }}s / {{ monitorStats.maxTotalSwitchDuration }}s</span>
+          </div>
+        </div>
+        <div class="monitor-stat">
+          <el-icon color="#f56c6c"><Picture /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">截图检测</span>
+            <span class="stat-value">{{ monitorStats.screenshotCount }} 次</span>
+          </div>
+        </div>
+        <div class="monitor-stat">
+          <el-icon color="#f56c6c"><VideoCamera /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">录屏检测</span>
+            <span class="stat-value">{{ monitorStats.screenRecordCount }} 次</span>
+          </div>
+        </div>
+        <div class="monitor-stat">
+          <el-icon color="#e6a23c"><Bell /></el-icon>
+          <div class="stat-info">
+            <span class="stat-label">警告次数</span>
+            <span class="stat-value warning">{{ monitorStats.warningCount }} 次</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showMonitorInfo = false">确定</el-button>
+      </template>
+    </el-dialog>
 
     <div class="exam-header">
       <div class="header-left">
@@ -24,6 +106,11 @@
           <el-icon v-else><WarningFilled /></el-icon>
           {{ saveStatusText }}
         </span>
+        <el-button type="info" size="small" @click="showMonitorInfo = true">
+          <el-icon><Monitor /></el-icon>
+          <span class="monitor-badge" v-if="monitorStats.warningCount > 0">{{ monitorStats.warningCount }}</span>
+          监控
+        </el-button>
         <span class="timer" :class="{ 'timer-warning': remainingMs < 300000 }">
           <el-icon><Clock /></el-icon>
           {{ formatTime(remainingMs) }}
@@ -147,7 +234,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Clock, List, ArrowLeft, ArrowRight, Check, VideoPause, VideoPlay,
-  Loading, CircleCheckFilled, WarningFilled
+  Loading, CircleCheckFilled, WarningFilled, Warning, Monitor,
+  SwitchButton, Picture, VideoCamera, Bell
 } from '@element-plus/icons-vue'
 import {
   startExam, submitExam, saveAnswer, saveAnswers,
@@ -155,6 +243,7 @@ import {
 } from '../../api/record'
 import { getExamDetail } from '../../api/exam'
 import { useUserStore } from '../../store/user'
+import { ScreenDetection, SwitchTypeLabel } from '../../utils/screenDetection'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,6 +262,24 @@ const isPaused = ref(false)
 const saveStatus = ref('saved')
 const submitted = ref(false)
 
+const showWarning = ref(false)
+const showMonitorInfo = ref(false)
+const currentWarning = ref(null)
+const monitorStats = reactive({
+  switchCount: 0,
+  totalSwitchDuration: 0,
+  screenshotCount: 0,
+  screenRecordCount: 0,
+  warningCount: 0,
+  isMonitoring: false,
+  maxSwitchCount: 3,
+  maxSingleSwitchDuration: 30,
+  maxTotalSwitchDuration: 60
+})
+const maxSwitchCount = ref(3)
+const maxTotalSwitchDuration = ref(60)
+
+let screenDetection = null
 let timerHandle = null
 let autoSaveHandle = null
 let debounceTimer = null
@@ -226,6 +333,56 @@ const formatTime = (ms) => {
   const m = Math.floor((total % 3600) / 60)
   const s = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+const initScreenDetection = async () => {
+  if (!recordInfo.id) return
+
+  screenDetection = new ScreenDetection({
+    recordId: recordInfo.id,
+    onWarning: (warning) => {
+      currentWarning.value = warning
+      showWarning.value = true
+      updateMonitorStats()
+      if (warning.count >= 3) {
+        ElMessage.warning('警告次数已达上限，系统将自动交卷')
+        setTimeout(() => doSubmit(true), 3000)
+      }
+    },
+    onSwitch: (switchInfo) => {
+      updateMonitorStats()
+      ElMessage({
+        message: `检测到${switchInfo.typeLabel}，请保持在考试页面`,
+        type: 'warning',
+        duration: 2000
+      })
+    },
+    onAutoSubmit: () => {
+      ElMessage.warning('违规次数过多，系统将自动交卷')
+      doSubmit(true)
+    }
+  })
+
+  await screenDetection.init()
+  maxSwitchCount.value = screenDetection.maxSwitchCount
+  maxTotalSwitchDuration.value = screenDetection.maxTotalSwitchDuration
+  updateMonitorStats()
+  screenDetection.start()
+}
+
+const updateMonitorStats = () => {
+  if (screenDetection) {
+    const stats = screenDetection.getStats()
+    Object.assign(monitorStats, stats)
+  }
+}
+
+const acknowledgeWarning = () => {
+  showWarning.value = false
+  currentWarning.value = null
+  if (document.hidden) {
+    window.focus()
+  }
 }
 
 const startTimer = (endTimeStr, pauseTimeMs = 0) => {
@@ -379,6 +536,9 @@ const handlePause = async () => {
       { type: 'warning' }
     )
     await doSaveAllAnswers()
+    if (screenDetection) {
+      screenDetection.stop()
+    }
     const res = await pauseExam({ recordId: recordInfo.id })
     Object.assign(recordInfo, res.data)
     isPaused.value = true
@@ -399,6 +559,9 @@ const handleResume = async () => {
     if (examInfo.endTime) {
       if (timerHandle) clearInterval(timerHandle)
       startTimer(examInfo.endTime, pauseTimeMs)
+    }
+    if (screenDetection) {
+      screenDetection.start()
     }
     ElMessage.success('已恢复答题')
   } catch (err) {
@@ -468,6 +631,8 @@ const init = async () => {
     startTimer(examInfo.endTime, pauseTimeMs)
     startAutoSave()
 
+    await initScreenDetection()
+
     window.addEventListener('beforeunload', handleBeforeUnload)
   } catch (err) {
     router.push('/exam')
@@ -482,6 +647,7 @@ onBeforeUnmount(() => {
   if (timerHandle) clearInterval(timerHandle)
   if (autoSaveHandle) clearInterval(autoSaveHandle)
   if (debounceTimer) clearTimeout(debounceTimer)
+  if (screenDetection) screenDetection.stop()
   window.removeEventListener('beforeunload', handleBeforeUnload)
   if (!submitted.value) {
     doSaveAllAnswers()
@@ -979,6 +1145,210 @@ onBeforeUnmount(() => {
   .submit-btn {
     order: 2;
     width: 100%;
+  }
+}
+
+.warning-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.warning-content {
+  background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+  padding: 48px 64px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(245, 108, 108, 0.3);
+  max-width: 500px;
+  margin: 0 20px;
+  border: 2px solid #f56c6c;
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.warning-icon {
+  font-size: 72px;
+  color: #f56c6c;
+  margin-bottom: 16px;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+.warning-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 28px;
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.warning-message {
+  margin: 0 0 24px 0;
+  color: #606266;
+  font-size: 16px;
+  line-height: 1.8;
+  background: #fef0f0;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #f56c6c;
+}
+
+.warning-stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.warning-stats .stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.warning-stats .stat-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.warning-stats .stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.warning-stats .stat-value.warning {
+  color: #f56c6c;
+}
+
+.monitor-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.monitor-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.monitor-stat:hover {
+  background: #ecf5ff;
+  transform: translateX(4px);
+}
+
+.monitor-stat .el-icon {
+  font-size: 24px;
+}
+
+.monitor-stat .stat-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.monitor-stat .stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.monitor-stat .stat-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.monitor-stat .stat-value.active {
+  color: #67c23a;
+}
+
+.monitor-stat .stat-value.inactive {
+  color: #909399;
+}
+
+.monitor-stat .stat-value.warning {
+  color: #f56c6c;
+}
+
+.header-right {
+  position: relative;
+}
+
+.monitor-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@media screen and (max-width: 768px) {
+  .warning-content {
+    padding: 32px 24px;
+  }
+
+  .warning-content h3 {
+    font-size: 22px;
+  }
+
+  .warning-stats {
+    gap: 12px;
+  }
+
+  .warning-stats .stat-value {
+    font-size: 16px;
   }
 }
 </style>
