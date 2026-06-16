@@ -18,6 +18,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +65,13 @@ public class LogAspect {
                     } else if (arg instanceof MultipartFile[]) {
                         MultipartFile[] files = (MultipartFile[]) arg;
                         filteredArgs.add("[文件数组] 共 " + files.length + " 个文件");
+                    } else if (arg instanceof HttpServletRequest) {
+                        filteredArgs.add("[HttpServletRequest]");
+                    } else if (arg instanceof HttpServletResponse) {
+                        filteredArgs.add("[HttpServletResponse]");
+                    } else if (arg != null && arg.getClass().getName().startsWith("javax.servlet")
+                            || (arg != null && arg.getClass().getName().startsWith("org.springframework.web"))) {
+                        filteredArgs.add("[" + arg.getClass().getSimpleName() + "]");
                     } else {
                         filteredArgs.add(arg);
                     }
@@ -88,8 +96,8 @@ public class LogAspect {
                     params = params.substring(0, 2000) + "...";
                 }
             }
-        } catch (Exception e) {
-            params = "参数解析失败";
+        } catch (Throwable e) {
+            params = "参数解析失败: " + e.getMessage();
         }
 
         String ip = "";
@@ -146,30 +154,34 @@ public class LogAspect {
             if (recordState && status == 1 && !targetId.isEmpty() && !targetType.isEmpty()) {
                 try {
                     afterState = operationLogService.getTargetState(targetType, targetId);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     afterState = "";
                 }
             }
 
-            OperationLog log = new OperationLog();
-            log.setUserId(userId);
-            log.setUsername(username);
-            log.setModule(module);
-            log.setOperation(operation);
-            log.setMethod(methodName);
-            log.setParams(params);
-            log.setIp(ip);
-            log.setStatus(status);
-            log.setErrorMsg(errorMsg);
-            log.setOperationType(operationType);
-            log.setTargetType(targetType);
-            log.setTargetId(targetId.isEmpty() ? null : targetId);
-            log.setBeforeState(beforeState.isEmpty() ? null : beforeState);
-            log.setAfterState(afterState.isEmpty() ? null : afterState);
-            log.setUserAgent(userAgent.isEmpty() ? null : userAgent);
-            log.setTraceId(traceId);
+            try {
+                OperationLog log = new OperationLog();
+                log.setUserId(userId);
+                log.setUsername(username);
+                log.setModule(module);
+                log.setOperation(operation);
+                log.setMethod(methodName);
+                log.setParams(params);
+                log.setIp(ip);
+                log.setStatus(status);
+                log.setErrorMsg(errorMsg);
+                log.setOperationType(operationType);
+                log.setTargetType(targetType);
+                log.setTargetId(targetId.isEmpty() ? null : targetId);
+                log.setBeforeState(beforeState.isEmpty() ? null : beforeState);
+                log.setAfterState(afterState.isEmpty() ? null : afterState);
+                log.setUserAgent(userAgent.isEmpty() ? null : userAgent);
+                log.setTraceId(traceId);
 
-            operationLogService.saveLogWithIntegrity(log);
+                operationLogService.saveLogWithIntegrity(log);
+            } catch (Throwable t) {
+                log.error("保存操作日志失败", t);
+            }
         }
 
         return result;
