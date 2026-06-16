@@ -253,30 +253,6 @@ public class OperationLogServiceImpl implements OperationLogService {
     }
 
     @Override
-    public OperationLog getDetail(Long id) {
-        try {
-            OperationLog log = operationLogMapper.selectById(id);
-            if (log != null) {
-                OperationLog ext = operationLogMapper.selectDetailWithExt(id);
-                if (ext != null) {
-                    log.setOperationType(ext.getOperationType());
-                    log.setTargetType(ext.getTargetType());
-                    log.setTargetId(ext.getTargetId());
-                    log.setBeforeState(ext.getBeforeState());
-                    log.setAfterState(ext.getAfterState());
-                    log.setUserAgent(ext.getUserAgent());
-                    log.setTraceId(ext.getTraceId());
-                    log.setChecksum(ext.getChecksum());
-                    log.setPreviousChecksum(ext.getPreviousChecksum());
-                }
-            }
-            return log;
-        } catch (Exception e) {
-            return operationLogMapper.selectById(id);
-        }
-    }
-
-    @Override
     public Map<String, Object> verifyIntegrity(Long startId, Long endId) {
         Map<String, Object> result = new HashMap<>();
         try {
