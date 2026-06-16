@@ -2,6 +2,7 @@ package com.exam.service.impl;
 
 import cn.hutool.crypto.asymmetric.RSA;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.common.BusinessException;
@@ -136,11 +137,11 @@ public class UserServiceImpl implements UserService {
         redisTemplate.delete(lockKey);
         redisTemplate.delete(errorCountKey);
 
-        User updateUser = new User();
-        updateUser.setId(id);
-        updateUser.setLoginLocked(Constants.LOGIN_LOCKED_NO);
-        updateUser.setLockEndTime(null);
-        return userMapper.updateById(updateUser) > 0;
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, id)
+                .set(User::getLoginLocked, Constants.LOGIN_LOCKED_NO)
+                .set(User::getLockEndTime, null);
+        return userMapper.update(null, wrapper) > 0;
     }
 
     @Override
