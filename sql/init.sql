@@ -138,20 +138,33 @@ CREATE TABLE `exam_answer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='考试答案表';
 
 CREATE TABLE `operation_log` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
-    `user_id`     BIGINT       DEFAULT NULL,
-    `username`    VARCHAR(50)  DEFAULT NULL,
-    `module`      VARCHAR(100) DEFAULT NULL,
-    `operation`   VARCHAR(200) DEFAULT NULL,
-    `method`      VARCHAR(200) DEFAULT NULL,
-    `params`      TEXT         DEFAULT NULL,
-    `ip`          VARCHAR(50)  DEFAULT NULL,
-    `status`      TINYINT      NOT NULL DEFAULT 1,
-    `error_msg`   VARCHAR(500) DEFAULT NULL,
-    `create_time` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    `id`                 BIGINT       NOT NULL AUTO_INCREMENT,
+    `user_id`            BIGINT       DEFAULT NULL,
+    `username`           VARCHAR(50)  DEFAULT NULL,
+    `module`             VARCHAR(100) DEFAULT NULL,
+    `operation`          VARCHAR(200) DEFAULT NULL,
+    `method`             VARCHAR(200) DEFAULT NULL,
+    `params`             TEXT         DEFAULT NULL,
+    `ip`                 VARCHAR(50)  DEFAULT NULL,
+    `status`             TINYINT      NOT NULL DEFAULT 1,
+    `error_msg`          VARCHAR(500) DEFAULT NULL,
+    `operation_type`     TINYINT      DEFAULT NULL COMMENT '1新增 2修改 3删除 4查询 5登录 6登出 7导出 8导入 9其他',
+    `target_type`        VARCHAR(100) DEFAULT NULL COMMENT '操作对象类型',
+    `target_id`          VARCHAR(100) DEFAULT NULL COMMENT '操作对象ID',
+    `before_state`       TEXT         DEFAULT NULL COMMENT '操作前状态JSON',
+    `after_state`        TEXT         DEFAULT NULL COMMENT '操作后状态JSON',
+    `user_agent`         VARCHAR(500) DEFAULT NULL COMMENT '浏览器UA',
+    `trace_id`           VARCHAR(64)  DEFAULT NULL COMMENT '链路追踪ID',
+    `checksum`           VARCHAR(64)  DEFAULT NULL COMMENT 'SHA-256哈希值',
+    `previous_checksum`  VARCHAR(64)  DEFAULT NULL COMMENT '前一条哈希值(链式校验)',
+    `create_time`        DATETIME     DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     INDEX `idx_user_id` (`user_id`),
-    INDEX `idx_create_time` (`create_time`)
+    INDEX `idx_create_time` (`create_time`),
+    INDEX `idx_operation_type` (`operation_type`),
+    INDEX `idx_target` (`target_type`, `target_id`),
+    INDEX `idx_trace_id` (`trace_id`),
+    INDEX `idx_module_operation` (`module`, `operation`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='操作日志表';
 
 INSERT INTO `subject` (`name`, `description`) VALUES

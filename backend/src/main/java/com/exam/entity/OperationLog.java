@@ -29,22 +29,31 @@ public class OperationLog {
 
     private String errorMsg;
 
+    @TableField(select = false)
     private Integer operationType;
 
+    @TableField(select = false)
     private String targetType;
 
+    @TableField(select = false)
     private String targetId;
 
+    @TableField(select = false)
     private String beforeState;
 
+    @TableField(select = false)
     private String afterState;
 
+    @TableField(select = false)
     private String userAgent;
 
+    @TableField(select = false)
     private String traceId;
 
+    @TableField(select = false)
     private String checksum;
 
+    @TableField(select = false)
     private String previousChecksum;
 
     @TableField(fill = FieldFill.INSERT)

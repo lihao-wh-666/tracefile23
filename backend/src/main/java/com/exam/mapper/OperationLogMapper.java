@@ -31,4 +31,7 @@ public interface OperationLogMapper extends BaseMapper<OperationLog> {
 
     @Select("SELECT status, COUNT(*) as cnt FROM operation_log WHERE create_time >= #{startTime} AND create_time <= #{endTime} GROUP BY status")
     List<Map<String, Object>> selectStatusStats(String startTime, String endTime);
+
+    @Select("SELECT id, operation_type, target_type, target_id, before_state, after_state, user_agent, trace_id, checksum, previous_checksum FROM operation_log WHERE id = #{id}")
+    OperationLog selectDetailWithExt(Long id);
 }

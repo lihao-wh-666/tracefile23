@@ -66,11 +66,32 @@ public class OperationLogServiceImpl implements OperationLogService {
 
     @Override
     public synchronized void saveLogWithIntegrity(OperationLog log) {
-        String lastChecksum = operationLogMapper.selectLastChecksum();
-        log.setPreviousChecksum(lastChecksum);
-        String checksum = computeChecksum(log);
-        log.setChecksum(checksum);
-        operationLogMapper.insert(log);
+        try {
+            String lastChecksum = null;
+            try {
+                lastChecksum = operationLogMapper.selectLastChecksum();
+            } catch (Exception ignored) {
+            }
+            log.setPreviousChecksum(lastChecksum);
+            String checksum = computeChecksum(log);
+            log.setChecksum(checksum);
+            operationLogMapper.insert(log);
+        } catch (Exception e) {
+            OperationLog fallback = new OperationLog();
+            fallback.setUserId(log.getUserId());
+            fallback.setUsername(log.getUsername());
+            fallback.setModule(log.getModule());
+            fallback.setOperation(log.getOperation());
+            fallback.setMethod(log.getMethod());
+            fallback.setParams(log.getParams());
+            fallback.setIp(log.getIp());
+            fallback.setStatus(log.getStatus());
+            fallback.setErrorMsg(log.getErrorMsg());
+            try {
+                operationLogMapper.insert(fallback);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private String computeChecksum(OperationLog log) {
@@ -156,93 +177,161 @@ public class OperationLogServiceImpl implements OperationLogService {
     public IPage<OperationLog> page(Integer current, Integer size, String keyword, Integer operationType,
                                     String module, String username, String targetType, String targetId,
                                     Integer status, LocalDateTime startTime, LocalDateTime endTime) {
-        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
-                    .or().like(OperationLog::getModule, keyword)
-                    .or().like(OperationLog::getOperation, keyword)
-                    .or().like(OperationLog::getTargetType, keyword)
-                    .or().like(OperationLog::getTargetId, keyword)
-                    .or().like(OperationLog::getIp, keyword)
-                    .or().like(OperationLog::getParams, keyword)
-                    .or().like(OperationLog::getTraceId, keyword));
+        try {
+            LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+            if (StringUtils.hasText(keyword)) {
+                wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
+                        .or().like(OperationLog::getModule, keyword)
+                        .or().like(OperationLog::getOperation, keyword)
+                        .or().like(OperationLog::getTargetType, keyword)
+                        .or().like(OperationLog::getTargetId, keyword)
+                        .or().like(OperationLog::getIp, keyword)
+                        .or().like(OperationLog::getParams, keyword)
+                        .or().like(OperationLog::getTraceId, keyword));
+            }
+            if (operationType != null) {
+                wrapper.eq(OperationLog::getOperationType, operationType);
+            }
+            if (StringUtils.hasText(module)) {
+                wrapper.like(OperationLog::getModule, module);
+            }
+            if (StringUtils.hasText(username)) {
+                wrapper.like(OperationLog::getUsername, username);
+            }
+            if (StringUtils.hasText(targetType)) {
+                wrapper.eq(OperationLog::getTargetType, targetType);
+            }
+            if (StringUtils.hasText(targetId)) {
+                wrapper.like(OperationLog::getTargetId, targetId);
+            }
+            if (status != null) {
+                wrapper.eq(OperationLog::getStatus, status);
+            }
+            if (startTime != null) {
+                wrapper.ge(OperationLog::getCreateTime, startTime);
+            }
+            if (endTime != null) {
+                wrapper.le(OperationLog::getCreateTime, endTime);
+            }
+            wrapper.orderByDesc(OperationLog::getId);
+            return operationLogMapper.selectPage(new Page<>(current, size), wrapper);
+        } catch (Exception e) {
+            LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+            if (StringUtils.hasText(keyword)) {
+                wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
+                        .or().like(OperationLog::getModule, keyword)
+                        .or().like(OperationLog::getOperation, keyword)
+                        .or().like(OperationLog::getIp, keyword)
+                        .or().like(OperationLog::getParams, keyword));
+            }
+            if (StringUtils.hasText(module)) {
+                wrapper.like(OperationLog::getModule, module);
+            }
+            if (StringUtils.hasText(username)) {
+                wrapper.like(OperationLog::getUsername, username);
+            }
+            if (status != null) {
+                wrapper.eq(OperationLog::getStatus, status);
+            }
+            if (startTime != null) {
+                wrapper.ge(OperationLog::getCreateTime, startTime);
+            }
+            if (endTime != null) {
+                wrapper.le(OperationLog::getCreateTime, endTime);
+            }
+            wrapper.orderByDesc(OperationLog::getId);
+            return operationLogMapper.selectPage(new Page<>(current, size), wrapper);
         }
-        if (operationType != null) {
-            wrapper.eq(OperationLog::getOperationType, operationType);
-        }
-        if (StringUtils.hasText(module)) {
-            wrapper.like(OperationLog::getModule, module);
-        }
-        if (StringUtils.hasText(username)) {
-            wrapper.like(OperationLog::getUsername, username);
-        }
-        if (StringUtils.hasText(targetType)) {
-            wrapper.eq(OperationLog::getTargetType, targetType);
-        }
-        if (StringUtils.hasText(targetId)) {
-            wrapper.like(OperationLog::getTargetId, targetId);
-        }
-        if (status != null) {
-            wrapper.eq(OperationLog::getStatus, status);
-        }
-        if (startTime != null) {
-            wrapper.ge(OperationLog::getCreateTime, startTime);
-        }
-        if (endTime != null) {
-            wrapper.le(OperationLog::getCreateTime, endTime);
-        }
-        wrapper.orderByDesc(OperationLog::getId);
-        return operationLogMapper.selectPage(new Page<>(current, size), wrapper);
     }
 
     @Override
     public OperationLog getDetail(Long id) {
-        return operationLogMapper.selectById(id);
+        try {
+            OperationLog log = operationLogMapper.selectById(id);
+            if (log != null) {
+                OperationLog ext = operationLogMapper.selectDetailWithExt(id);
+                if (ext != null) {
+                    log.setOperationType(ext.getOperationType());
+                    log.setTargetType(ext.getTargetType());
+                    log.setTargetId(ext.getTargetId());
+                    log.setBeforeState(ext.getBeforeState());
+                    log.setAfterState(ext.getAfterState());
+                    log.setUserAgent(ext.getUserAgent());
+                    log.setTraceId(ext.getTraceId());
+                    log.setChecksum(ext.getChecksum());
+                    log.setPreviousChecksum(ext.getPreviousChecksum());
+                }
+            }
+            return log;
+        } catch (Exception e) {
+            return operationLogMapper.selectById(id);
+        }
     }
 
     @Override
     public Map<String, Object> verifyIntegrity(Long startId, Long endId) {
         Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> chain = operationLogMapper.selectChecksumChain(startId, endId);
-        List<Map<String, Object>> errors = new ArrayList<>();
-        int total = chain.size();
-        int validCount = 0;
+        try {
+            List<Map<String, Object>> chain = operationLogMapper.selectChecksumChain(startId, endId);
+            List<Map<String, Object>> errors = new ArrayList<>();
+            int total = chain.size();
+            int validCount = 0;
 
-        String prevChecksum = null;
-        for (int i = 0; i < chain.size(); i++) {
-            Map<String, Object> row = chain.get(i);
-            Long id = ((Number) row.get("id")).longValue();
-            String currentChecksum = (String) row.get("checksum");
-            String storedPrevChecksum = (String) row.get("previous_checksum");
+            String prevChecksum = null;
+            for (int i = 0; i < chain.size(); i++) {
+                Map<String, Object> row = chain.get(i);
+                Long id = ((Number) row.get("id")).longValue();
+                String currentChecksum = (String) row.get("checksum");
+                String storedPrevChecksum = (String) row.get("previous_checksum");
 
-            boolean prevMatch = true;
-            if (i > 0 && prevChecksum != null) {
-                prevMatch = prevChecksum.equals(storedPrevChecksum);
-            }
-
-            OperationLog log = operationLogMapper.selectById(id);
-            if (log != null) {
-                log.setPreviousChecksum(storedPrevChecksum);
-                String computedChecksum = computeChecksum(log);
-                boolean checksumMatch = computedChecksum.equals(currentChecksum);
-
-                if (checksumMatch && prevMatch) {
-                    validCount++;
-                } else {
-                    Map<String, Object> error = new HashMap<>();
-                    error.put("id", id);
-                    error.put("checksumMatch", checksumMatch);
-                    error.put("prevChainMatch", prevMatch);
-                    errors.add(error);
+                boolean prevMatch = true;
+                if (i > 0 && prevChecksum != null) {
+                    prevMatch = prevChecksum.equals(storedPrevChecksum);
                 }
-            }
-            prevChecksum = currentChecksum;
-        }
 
-        result.put("total", total);
-        result.put("valid", validCount);
-        result.put("errors", errors);
-        result.put("isValid", errors.isEmpty() && total > 0);
+                OperationLog log = operationLogMapper.selectById(id);
+                if (log != null) {
+                    log.setPreviousChecksum(storedPrevChecksum);
+                    OperationLog ext = operationLogMapper.selectDetailWithExt(id);
+                    if (ext != null) {
+                        log.setOperationType(ext.getOperationType());
+                        log.setTargetType(ext.getTargetType());
+                        log.setTargetId(ext.getTargetId());
+                        log.setBeforeState(ext.getBeforeState());
+                        log.setAfterState(ext.getAfterState());
+                        log.setUserAgent(ext.getUserAgent());
+                        log.setTraceId(ext.getTraceId());
+                        log.setChecksum(ext.getChecksum());
+                    }
+                    String computedChecksum = computeChecksum(log);
+                    boolean checksumMatch = computedChecksum.equals(currentChecksum);
+
+                    if (checksumMatch && prevMatch) {
+                        validCount++;
+                    } else {
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("id", id);
+                        error.put("checksumMatch", checksumMatch);
+                        error.put("prevChainMatch", prevMatch);
+                        errors.add(error);
+                    }
+                }
+                prevChecksum = currentChecksum;
+            }
+
+            result.put("total", total);
+            result.put("valid", validCount);
+            result.put("errors", errors);
+            result.put("isValid", errors.isEmpty() && total > 0);
+            result.put("featureEnabled", true);
+        } catch (Exception e) {
+            result.put("total", 0);
+            result.put("valid", 0);
+            result.put("errors", Collections.emptyList());
+            result.put("isValid", false);
+            result.put("featureEnabled", false);
+            result.put("message", "请先执行 add_operation_log_enhancement.sql 启用完整性校验功能");
+        }
         return result;
     }
 
@@ -252,27 +341,119 @@ public class OperationLogServiceImpl implements OperationLogService {
         String startStr = startTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String endStr = endTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        result.put("operationTypeStats", operationLogMapper.selectOperationTypeStats(startStr, endStr));
-        result.put("moduleStats", operationLogMapper.selectModuleStats(startStr, endStr));
-        result.put("userStats", operationLogMapper.selectUserStats(startStr, endStr));
-        result.put("dateStats", operationLogMapper.selectDateStats(startStr, endStr));
-        result.put("statusStats", operationLogMapper.selectStatusStats(startStr, endStr));
-
+        List<Map<String, Object>> operationTypeStats = Collections.emptyList();
+        List<Map<String, Object>> moduleStats = Collections.emptyList();
+        List<Map<String, Object>> userStats = Collections.emptyList();
+        List<Map<String, Object>> dateStats = Collections.emptyList();
+        List<Map<String, Object>> statusStats = Collections.emptyList();
+        boolean featureEnabled = true;
         long totalCount = 0;
         long successCount = 0;
         long failCount = 0;
-        List<Map<String, Object>> statusStats = operationLogMapper.selectStatusStats(startStr, endStr);
-        for (Map<String, Object> stat : statusStats) {
-            long cnt = ((Number) stat.get("cnt")).longValue();
-            Integer status = ((Number) stat.get("status")).intValue();
-            totalCount += cnt;
-            if (status == 1) successCount = cnt;
-            else failCount = cnt;
+
+        try {
+            operationTypeStats = operationLogMapper.selectOperationTypeStats(startStr, endStr);
+            moduleStats = operationLogMapper.selectModuleStats(startStr, endStr);
+            userStats = operationLogMapper.selectUserStats(startStr, endStr);
+            dateStats = operationLogMapper.selectDateStats(startStr, endStr);
+            statusStats = operationLogMapper.selectStatusStats(startStr, endStr);
+            for (Map<String, Object> stat : statusStats) {
+                long cnt = ((Number) stat.get("cnt")).longValue();
+                Integer status = ((Number) stat.get("status")).intValue();
+                totalCount += cnt;
+                if (status == 1) successCount += cnt;
+                else failCount += cnt;
+            }
+        } catch (Exception e) {
+            featureEnabled = false;
+            try {
+                LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+                wrapper.ge(OperationLog::getCreateTime, startTime);
+                wrapper.le(OperationLog::getCreateTime, endTime);
+                wrapper.select(OperationLog::getStatus);
+                List<OperationLog> all = operationLogMapper.selectList(wrapper);
+                totalCount = all.size();
+                for (OperationLog log : all) {
+                    if (log.getStatus() != null && log.getStatus() == 1) successCount++;
+                    else failCount++;
+                }
+                moduleStats = buildFallbackModuleStats(startTime, endTime);
+                userStats = buildFallbackUserStats(startTime, endTime);
+                dateStats = buildFallbackDateStats(startTime, endTime);
+            } catch (Exception ignored) {
+            }
         }
+
+        result.put("operationTypeStats", operationTypeStats);
+        result.put("moduleStats", moduleStats);
+        result.put("userStats", userStats);
+        result.put("dateStats", dateStats);
+        result.put("statusStats", statusStats);
         result.put("totalCount", totalCount);
         result.put("successCount", successCount);
         result.put("failCount", failCount);
+        result.put("featureEnabled", featureEnabled);
+        return result;
+    }
 
+    private List<Map<String, Object>> buildFallbackModuleStats(LocalDateTime start, LocalDateTime end) {
+        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(OperationLog::getCreateTime, start);
+        wrapper.le(OperationLog::getCreateTime, end);
+        wrapper.select(OperationLog::getModule);
+        List<OperationLog> logs = operationLogMapper.selectList(wrapper);
+        Map<String, Long> map = new LinkedHashMap<>();
+        for (OperationLog log : logs) {
+            String m = log.getModule() == null ? "(未分类)" : log.getModule();
+            map.merge(m, 1L, Long::sum);
+        }
+        return mapToList(map, 10, "module");
+    }
+
+    private List<Map<String, Object>> buildFallbackUserStats(LocalDateTime start, LocalDateTime end) {
+        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(OperationLog::getCreateTime, start);
+        wrapper.le(OperationLog::getCreateTime, end);
+        wrapper.select(OperationLog::getUsername);
+        List<OperationLog> logs = operationLogMapper.selectList(wrapper);
+        Map<String, Long> map = new LinkedHashMap<>();
+        for (OperationLog log : logs) {
+            String u = log.getUsername() == null ? "(匿名)" : log.getUsername();
+            map.merge(u, 1L, Long::sum);
+        }
+        return mapToList(map, 10, "username");
+    }
+
+    private List<Map<String, Object>> buildFallbackDateStats(LocalDateTime start, LocalDateTime end) {
+        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(OperationLog::getCreateTime, start);
+        wrapper.le(OperationLog::getCreateTime, end);
+        wrapper.select(OperationLog::getCreateTime);
+        List<OperationLog> logs = operationLogMapper.selectList(wrapper);
+        Map<String, Long> map = new TreeMap<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        for (OperationLog log : logs) {
+            if (log.getCreateTime() != null) {
+                String d = log.getCreateTime().format(fmt);
+                map.merge(d, 1L, Long::sum);
+            }
+        }
+        return mapToList(map, null, "date");
+    }
+
+    private List<Map<String, Object>> mapToList(Map<String, Long> map, Integer limit, String keyName) {
+        List<Map.Entry<String, Long>> list = new ArrayList<>(map.entrySet());
+        list.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+        if (limit != null && list.size() > limit) {
+            list = list.subList(0, limit);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, Long> e : list) {
+            Map<String, Object> m = new HashMap<>();
+            m.put(keyName, e.getKey());
+            m.put("cnt", e.getValue());
+            result.add(m);
+        }
         return result;
     }
 
@@ -280,23 +461,41 @@ public class OperationLogServiceImpl implements OperationLogService {
     public List<OperationLog> listForExport(String keyword, Integer operationType,
                                             String module, String username, String targetType,
                                             Integer status, LocalDateTime startTime, LocalDateTime endTime) {
-        LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
-                    .or().like(OperationLog::getModule, keyword)
-                    .or().like(OperationLog::getOperation, keyword)
-                    .or().like(OperationLog::getTargetType, keyword)
-                    .or().like(OperationLog::getIp, keyword));
+        try {
+            LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+            if (StringUtils.hasText(keyword)) {
+                wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
+                        .or().like(OperationLog::getModule, keyword)
+                        .or().like(OperationLog::getOperation, keyword)
+                        .or().like(OperationLog::getTargetType, keyword)
+                        .or().like(OperationLog::getIp, keyword));
+            }
+            if (operationType != null) wrapper.eq(OperationLog::getOperationType, operationType);
+            if (StringUtils.hasText(module)) wrapper.like(OperationLog::getModule, module);
+            if (StringUtils.hasText(username)) wrapper.like(OperationLog::getUsername, username);
+            if (StringUtils.hasText(targetType)) wrapper.eq(OperationLog::getTargetType, targetType);
+            if (status != null) wrapper.eq(OperationLog::getStatus, status);
+            if (startTime != null) wrapper.ge(OperationLog::getCreateTime, startTime);
+            if (endTime != null) wrapper.le(OperationLog::getCreateTime, endTime);
+            wrapper.orderByDesc(OperationLog::getId);
+            wrapper.last("LIMIT 10000");
+            return operationLogMapper.selectList(wrapper);
+        } catch (Exception e) {
+            LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+            if (StringUtils.hasText(keyword)) {
+                wrapper.and(w -> w.like(OperationLog::getUsername, keyword)
+                        .or().like(OperationLog::getModule, keyword)
+                        .or().like(OperationLog::getOperation, keyword)
+                        .or().like(OperationLog::getIp, keyword));
+            }
+            if (StringUtils.hasText(module)) wrapper.like(OperationLog::getModule, module);
+            if (StringUtils.hasText(username)) wrapper.like(OperationLog::getUsername, username);
+            if (status != null) wrapper.eq(OperationLog::getStatus, status);
+            if (startTime != null) wrapper.ge(OperationLog::getCreateTime, startTime);
+            if (endTime != null) wrapper.le(OperationLog::getCreateTime, endTime);
+            wrapper.orderByDesc(OperationLog::getId);
+            wrapper.last("LIMIT 10000");
+            return operationLogMapper.selectList(wrapper);
         }
-        if (operationType != null) wrapper.eq(OperationLog::getOperationType, operationType);
-        if (StringUtils.hasText(module)) wrapper.like(OperationLog::getModule, module);
-        if (StringUtils.hasText(username)) wrapper.like(OperationLog::getUsername, username);
-        if (StringUtils.hasText(targetType)) wrapper.eq(OperationLog::getTargetType, targetType);
-        if (status != null) wrapper.eq(OperationLog::getStatus, status);
-        if (startTime != null) wrapper.ge(OperationLog::getCreateTime, startTime);
-        if (endTime != null) wrapper.le(OperationLog::getCreateTime, endTime);
-        wrapper.orderByDesc(OperationLog::getId);
-        wrapper.last("LIMIT 10000");
-        return operationLogMapper.selectList(wrapper);
     }
 }
