@@ -30,6 +30,7 @@ export default {
     user: '用户管理',
     systemConfig: '系统参数管理',
     operationLog: '操作日志留痕',
+    logArchive: '日志归档管理',
     profile: '个人中心',
     settings: '偏好设置'
   },

@@ -30,6 +30,7 @@ export default {
     user: 'User Management',
     systemConfig: 'System Config',
     operationLog: 'Audit Logs',
+    logArchive: 'Log Archive',
     profile: 'Profile',
     settings: 'Settings'
   },

@@ -80,6 +80,10 @@
           <el-icon><DataBoard /></el-icon>
           <span>{{ t('menu.operationLog') }}</span>
         </el-menu-item>
+        <el-menu-item index="/log-archive" v-if="hasRole([1])">
+          <el-icon><Folder /></el-icon>
+          <span>{{ t('menu.logArchive') }}</span>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><Setting /></el-icon>
           <span>{{ t('menu.profile') }}</span>
@@ -145,7 +149,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon, DataBoard } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon, DataBoard, Folder } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 import { usePreferencesStore } from '../store/preferences'
 

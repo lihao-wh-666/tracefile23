@@ -30,6 +30,7 @@ export default {
     user: 'ユーザー管理',
     systemConfig: 'システム設定',
     operationLog: '操作ログ監査',
+    logArchive: 'ログアーカイブ',
     profile: 'プロフィール',
     settings: '個人設定'
   },

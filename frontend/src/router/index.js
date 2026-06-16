@@ -106,6 +106,12 @@ const routes = [
         meta: { title: 'operationLog', roles: [1] }
       },
       {
+        path: 'log-archive',
+        name: 'LogArchiveList',
+        component: () => import('../views/logArchive/LogArchiveList.vue'),
+        meta: { title: 'logArchive', roles: [1] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
