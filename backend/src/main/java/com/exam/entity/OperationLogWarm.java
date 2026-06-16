@@ -5,8 +5,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("operation_log")
-public class OperationLog {
+@TableName("operation_log_warm")
+public class OperationLogWarm {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -29,37 +29,27 @@ public class OperationLog {
 
     private String errorMsg;
 
-    @TableField(select = false)
     private Integer operationType;
 
-    @TableField(select = false)
     private String targetType;
 
-    @TableField(select = false)
     private String targetId;
 
-    @TableField(select = false)
     private String beforeState;
 
-    @TableField(select = false)
     private String afterState;
 
-    @TableField(select = false)
     private String userAgent;
 
-    @TableField(select = false)
     private String traceId;
 
-    @TableField(select = false)
     private String checksum;
 
-    @TableField(select = false)
     private String previousChecksum;
 
-    private Integer archiveStatus;
+    private LocalDateTime createTime;
+
+    private LocalDateTime archivedTime;
 
     private String archiveBatchId;
-
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
 }

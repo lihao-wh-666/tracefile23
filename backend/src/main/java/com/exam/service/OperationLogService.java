@@ -28,4 +28,9 @@ public interface OperationLogService {
     List<OperationLog> listForExport(String keyword, Integer operationType,
                                      String module, String username, String targetType,
                                      Integer status, LocalDateTime startTime, LocalDateTime endTime);
+
+    IPage<Map<String, Object>> pageCrossTier(Integer current, Integer size, String keyword, Integer operationType,
+                                             String module, String username, String targetType, String targetId,
+                                             Integer status, LocalDateTime startTime, LocalDateTime endTime,
+                                             Boolean includeArchived);
 }

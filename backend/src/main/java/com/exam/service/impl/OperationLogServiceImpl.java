@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.entity.OperationLog;
+import com.exam.entity.OperationLogArchive;
+import com.exam.entity.OperationLogWarm;
 import com.exam.mapper.*;
 import com.exam.service.OperationLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +23,8 @@ import java.util.*;
 public class OperationLogServiceImpl implements OperationLogService {
 
     private final OperationLogMapper operationLogMapper;
+    private final OperationLogWarmMapper warmMapper;
+    private final OperationLogArchiveMapper archiveMapper;
     private final UserMapper userMapper;
     private final QuestionMapper questionMapper;
     private final PaperMapper paperMapper;
@@ -30,6 +34,8 @@ public class OperationLogServiceImpl implements OperationLogService {
     private final ObjectMapper objectMapper;
 
     public OperationLogServiceImpl(OperationLogMapper operationLogMapper,
+                                   OperationLogWarmMapper warmMapper,
+                                   OperationLogArchiveMapper archiveMapper,
                                    UserMapper userMapper,
                                    QuestionMapper questionMapper,
                                    PaperMapper paperMapper,
@@ -38,6 +44,8 @@ public class OperationLogServiceImpl implements OperationLogService {
                                    SystemConfigMapper systemConfigMapper,
                                    ObjectMapper objectMapper) {
         this.operationLogMapper = operationLogMapper;
+        this.warmMapper = warmMapper;
+        this.archiveMapper = archiveMapper;
         this.userMapper = userMapper;
         this.questionMapper = questionMapper;
         this.paperMapper = paperMapper;
@@ -497,5 +505,368 @@ public class OperationLogServiceImpl implements OperationLogService {
             wrapper.last("LIMIT 10000");
             return operationLogMapper.selectList(wrapper);
         }
+    }
+
+    @Override
+    public OperationLog getDetail(Long id) {
+        OperationLog log = null;
+        try {
+            log = operationLogMapper.selectById(id);
+            if (log != null) {
+                OperationLog ext = operationLogMapper.selectDetailWithExt(id);
+                if (ext != null) {
+                    log.setOperationType(ext.getOperationType());
+                    log.setTargetType(ext.getTargetType());
+                    log.setTargetId(ext.getTargetId());
+                    log.setBeforeState(ext.getBeforeState());
+                    log.setAfterState(ext.getAfterState());
+                    log.setUserAgent(ext.getUserAgent());
+                    log.setTraceId(ext.getTraceId());
+                    log.setChecksum(ext.getChecksum());
+                    log.setPreviousChecksum(ext.getPreviousChecksum());
+                    log.setArchiveStatus(ext.getArchiveStatus());
+                    log.setArchiveBatchId(ext.getArchiveBatchId());
+                }
+                log.setArchiveStatus(log.getArchiveStatus() == null ? 0 : log.getArchiveStatus());
+                return log;
+            }
+        } catch (Exception ignored) {
+        }
+
+        try {
+            OperationLogWarm warm = warmMapper.selectById(id);
+            if (warm != null) {
+                return convertWarmToLog(warm);
+            }
+        } catch (Exception ignored) {
+        }
+
+        try {
+            OperationLogArchive cold = archiveMapper.selectById(id);
+            if (cold != null) {
+                return convertArchiveToLog(cold);
+            }
+        } catch (Exception ignored) {
+        }
+
+        return null;
+    }
+
+    @Override
+    public IPage<Map<String, Object>> pageCrossTier(Integer current, Integer size, String keyword, Integer operationType,
+                                                     String module, String username, String targetType, String targetId,
+                                                     Integer status, LocalDateTime startTime, LocalDateTime endTime,
+                                                     Boolean includeArchived) {
+        List<Map<String, Object>> allRecords = new ArrayList<>();
+
+        List<OperationLog> hotLogs = queryHot(keyword, operationType, module, username,
+                targetType, targetId, status, startTime, endTime);
+        for (OperationLog log : hotLogs) {
+            allRecords.add(convertLogToMap(log, "HOT"));
+        }
+
+        if (Boolean.TRUE.equals(includeArchived)) {
+            List<OperationLogWarm> warmLogs = queryWarm(keyword, operationType, module, username,
+                    targetType, targetId, status, startTime, endTime);
+            for (OperationLogWarm w : warmLogs) {
+                allRecords.add(convertWarmToMap(w));
+            }
+
+            List<OperationLogArchive> coldLogs = queryCold(keyword, operationType, module, username,
+                    targetType, targetId, status, startTime, endTime);
+            for (OperationLogArchive c : coldLogs) {
+                allRecords.add(convertArchiveToMap(c));
+            }
+        }
+
+        allRecords.sort((a, b) -> {
+            LocalDateTime ta = (LocalDateTime) a.get("createTime");
+            LocalDateTime tb = (LocalDateTime) b.get("createTime");
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return 1;
+            if (tb == null) return -1;
+            return tb.compareTo(ta);
+        });
+
+        int total = allRecords.size();
+        int from = Math.min((current - 1) * size, total);
+        int to = Math.min(from + size, total);
+        List<Map<String, Object>> pageRecords = allRecords.subList(from, to);
+
+        Page<Map<String, Object>> page = new Page<>(current, size, total);
+        page.setRecords(pageRecords);
+        return page;
+    }
+
+    private List<OperationLog> queryHot(String keyword, Integer operationType, String module, String username,
+                                        String targetType, String targetId, Integer status,
+                                        LocalDateTime startTime, LocalDateTime endTime) {
+        try {
+            LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
+            applyQueryCondition(wrapper, keyword, operationType, module, username,
+                    targetType, targetId, status, startTime, endTime, OperationLog.class);
+            wrapper.orderByDesc(OperationLog::getId);
+            wrapper.last("LIMIT 1000");
+            return operationLogMapper.selectList(wrapper);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<OperationLogWarm> queryWarm(String keyword, Integer operationType, String module, String username,
+                                             String targetType, String targetId, Integer status,
+                                             LocalDateTime startTime, LocalDateTime endTime) {
+        try {
+            LambdaQueryWrapper<OperationLogWarm> wrapper = new LambdaQueryWrapper<>();
+            applyQueryConditionWarm(wrapper, keyword, operationType, module, username,
+                    targetType, targetId, status, startTime, endTime);
+            wrapper.orderByDesc(OperationLogWarm::getId);
+            wrapper.last("LIMIT 1000");
+            return warmMapper.selectList(wrapper);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    private List<OperationLogArchive> queryCold(String keyword, Integer operationType, String module, String username,
+                                                String targetType, String targetId, Integer status,
+                                                LocalDateTime startTime, LocalDateTime endTime) {
+        try {
+            LambdaQueryWrapper<OperationLogArchive> wrapper = new LambdaQueryWrapper<>();
+            applyQueryConditionArchive(wrapper, keyword, operationType, module, username,
+                    targetType, targetId, status, startTime, endTime);
+            wrapper.orderByDesc(OperationLogArchive::getId);
+            wrapper.last("LIMIT 1000");
+            return archiveMapper.selectList(wrapper);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void applyQueryCondition(LambdaQueryWrapper<T> wrapper, String keyword, Integer operationType,
+                                         String module, String username, String targetType, String targetId,
+                                         Integer status, LocalDateTime startTime, LocalDateTime endTime, Class<T> clazz) {
+        if (StringUtils.hasText(keyword)) {
+            if (clazz == OperationLog.class) {
+                LambdaQueryWrapper<OperationLog> w = (LambdaQueryWrapper<OperationLog>) wrapper;
+                w.and(ww -> ww.like(OperationLog::getUsername, keyword)
+                        .or().like(OperationLog::getModule, keyword)
+                        .or().like(OperationLog::getOperation, keyword)
+                        .or().like(OperationLog::getTargetType, keyword)
+                        .or().like(OperationLog::getTargetId, keyword)
+                        .or().like(OperationLog::getIp, keyword)
+                        .or().like(OperationLog::getTraceId, keyword));
+            }
+        }
+        if (operationType != null) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).eq(OperationLog::getOperationType, operationType);
+            }
+        }
+        if (StringUtils.hasText(module)) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).like(OperationLog::getModule, module);
+            }
+        }
+        if (StringUtils.hasText(username)) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).like(OperationLog::getUsername, username);
+            }
+        }
+        if (StringUtils.hasText(targetType)) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).eq(OperationLog::getTargetType, targetType);
+            }
+        }
+        if (StringUtils.hasText(targetId)) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).like(OperationLog::getTargetId, targetId);
+            }
+        }
+        if (status != null) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).eq(OperationLog::getStatus, status);
+            }
+        }
+        if (startTime != null) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).ge(OperationLog::getCreateTime, startTime);
+            }
+        }
+        if (endTime != null) {
+            if (clazz == OperationLog.class) {
+                ((LambdaQueryWrapper<OperationLog>) wrapper).le(OperationLog::getCreateTime, endTime);
+            }
+        }
+    }
+
+    private void applyQueryConditionWarm(LambdaQueryWrapper<OperationLogWarm> wrapper, String keyword, Integer operationType,
+                                         String module, String username, String targetType, String targetId,
+                                         Integer status, LocalDateTime startTime, LocalDateTime endTime) {
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(OperationLogWarm::getUsername, keyword)
+                    .or().like(OperationLogWarm::getModule, keyword)
+                    .or().like(OperationLogWarm::getOperation, keyword)
+                    .or().like(OperationLogWarm::getTargetType, keyword)
+                    .or().like(OperationLogWarm::getTargetId, keyword)
+                    .or().like(OperationLogWarm::getIp, keyword)
+                    .or().like(OperationLogWarm::getTraceId, keyword));
+        }
+        if (operationType != null) wrapper.eq(OperationLogWarm::getOperationType, operationType);
+        if (StringUtils.hasText(module)) wrapper.like(OperationLogWarm::getModule, module);
+        if (StringUtils.hasText(username)) wrapper.like(OperationLogWarm::getUsername, username);
+        if (StringUtils.hasText(targetType)) wrapper.eq(OperationLogWarm::getTargetType, targetType);
+        if (StringUtils.hasText(targetId)) wrapper.like(OperationLogWarm::getTargetId, targetId);
+        if (status != null) wrapper.eq(OperationLogWarm::getStatus, status);
+        if (startTime != null) wrapper.ge(OperationLogWarm::getCreateTime, startTime);
+        if (endTime != null) wrapper.le(OperationLogWarm::getCreateTime, endTime);
+    }
+
+    private void applyQueryConditionArchive(LambdaQueryWrapper<OperationLogArchive> wrapper, String keyword, Integer operationType,
+                                            String module, String username, String targetType, String targetId,
+                                            Integer status, LocalDateTime startTime, LocalDateTime endTime) {
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(OperationLogArchive::getUsername, keyword)
+                    .or().like(OperationLogArchive::getModule, keyword)
+                    .or().like(OperationLogArchive::getOperation, keyword)
+                    .or().like(OperationLogArchive::getTargetType, keyword)
+                    .or().like(OperationLogArchive::getTargetId, keyword)
+                    .or().like(OperationLogArchive::getIp, keyword)
+                    .or().like(OperationLogArchive::getTraceId, keyword));
+        }
+        if (operationType != null) wrapper.eq(OperationLogArchive::getOperationType, operationType);
+        if (StringUtils.hasText(module)) wrapper.like(OperationLogArchive::getModule, module);
+        if (StringUtils.hasText(username)) wrapper.like(OperationLogArchive::getUsername, username);
+        if (StringUtils.hasText(targetType)) wrapper.eq(OperationLogArchive::getTargetType, targetType);
+        if (StringUtils.hasText(targetId)) wrapper.like(OperationLogArchive::getTargetId, targetId);
+        if (status != null) wrapper.eq(OperationLogArchive::getStatus, status);
+        if (startTime != null) wrapper.ge(OperationLogArchive::getCreateTime, startTime);
+        if (endTime != null) wrapper.le(OperationLogArchive::getCreateTime, endTime);
+    }
+
+    private Map<String, Object> convertLogToMap(OperationLog log, String level) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", log.getId());
+        map.put("storageLevel", level);
+        map.put("storageLevelName", "热表(最近7天)");
+        map.put("userId", log.getUserId());
+        map.put("username", log.getUsername());
+        map.put("module", log.getModule());
+        map.put("operation", log.getOperation());
+        map.put("operationType", log.getOperationType());
+        map.put("targetType", log.getTargetType());
+        map.put("targetId", log.getTargetId());
+        map.put("method", log.getMethod());
+        map.put("ip", log.getIp());
+        map.put("status", log.getStatus());
+        map.put("errorMsg", log.getErrorMsg());
+        map.put("traceId", log.getTraceId());
+        map.put("createTime", log.getCreateTime());
+        map.put("archiveStatus", log.getArchiveStatus());
+        map.put("archiveBatchId", log.getArchiveBatchId());
+        return map;
+    }
+
+    private Map<String, Object> convertWarmToMap(OperationLogWarm w) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", w.getId());
+        map.put("storageLevel", "WARM");
+        map.put("storageLevelName", "温表(7天-3个月)");
+        map.put("userId", w.getUserId());
+        map.put("username", w.getUsername());
+        map.put("module", w.getModule());
+        map.put("operation", w.getOperation());
+        map.put("operationType", w.getOperationType());
+        map.put("targetType", w.getTargetType());
+        map.put("targetId", w.getTargetId());
+        map.put("method", w.getMethod());
+        map.put("ip", w.getIp());
+        map.put("status", w.getStatus());
+        map.put("errorMsg", w.getErrorMsg());
+        map.put("traceId", w.getTraceId());
+        map.put("createTime", w.getCreateTime());
+        map.put("archivedTime", w.getArchivedTime());
+        map.put("archiveBatchId", w.getArchiveBatchId());
+        return map;
+    }
+
+    private Map<String, Object> convertArchiveToMap(OperationLogArchive c) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", c.getId());
+        Integer sl = c.getStorageLevel();
+        map.put("storageLevel", sl != null && sl == 4 ? "FILE" : "COLD");
+        map.put("storageLevelName", sl != null && sl == 4 ? "文件归档(3个月以上)" : "冷表(3个月以上)");
+        map.put("userId", c.getUserId());
+        map.put("username", c.getUsername());
+        map.put("module", c.getModule());
+        map.put("operation", c.getOperation());
+        map.put("operationType", c.getOperationType());
+        map.put("targetType", c.getTargetType());
+        map.put("targetId", c.getTargetId());
+        map.put("method", c.getMethod());
+        map.put("ip", c.getIp());
+        map.put("status", c.getStatus());
+        map.put("errorMsg", c.getErrorMsg());
+        map.put("traceId", c.getTraceId());
+        map.put("createTime", c.getCreateTime());
+        map.put("archivedTime", c.getArchivedTime());
+        map.put("archiveBatchId", c.getArchiveBatchId());
+        map.put("filePath", c.getFilePath());
+        return map;
+    }
+
+    private OperationLog convertWarmToLog(OperationLogWarm w) {
+        OperationLog log = new OperationLog();
+        log.setId(w.getId());
+        log.setUserId(w.getUserId());
+        log.setUsername(w.getUsername());
+        log.setModule(w.getModule());
+        log.setOperation(w.getOperation());
+        log.setMethod(w.getMethod());
+        log.setParams(w.getParams());
+        log.setIp(w.getIp());
+        log.setStatus(w.getStatus());
+        log.setErrorMsg(w.getErrorMsg());
+        log.setOperationType(w.getOperationType());
+        log.setTargetType(w.getTargetType());
+        log.setTargetId(w.getTargetId());
+        log.setBeforeState(w.getBeforeState());
+        log.setAfterState(w.getAfterState());
+        log.setUserAgent(w.getUserAgent());
+        log.setTraceId(w.getTraceId());
+        log.setChecksum(w.getChecksum());
+        log.setPreviousChecksum(w.getPreviousChecksum());
+        log.setCreateTime(w.getCreateTime());
+        log.setArchiveStatus(1);
+        log.setArchiveBatchId(w.getArchiveBatchId());
+        return log;
+    }
+
+    private OperationLog convertArchiveToLog(OperationLogArchive c) {
+        OperationLog log = new OperationLog();
+        log.setId(c.getId());
+        log.setUserId(c.getUserId());
+        log.setUsername(c.getUsername());
+        log.setModule(c.getModule());
+        log.setOperation(c.getOperation());
+        log.setMethod(c.getMethod());
+        log.setParams(c.getParams());
+        log.setIp(c.getIp());
+        log.setStatus(c.getStatus());
+        log.setErrorMsg(c.getErrorMsg());
+        log.setOperationType(c.getOperationType());
+        log.setTargetType(c.getTargetType());
+        log.setTargetId(c.getTargetId());
+        log.setBeforeState(c.getBeforeState());
+        log.setAfterState(c.getAfterState());
+        log.setUserAgent(c.getUserAgent());
+        log.setTraceId(c.getTraceId());
+        log.setChecksum(c.getChecksum());
+        log.setPreviousChecksum(c.getPreviousChecksum());
+        log.setCreateTime(c.getCreateTime());
+        log.setArchiveStatus(c.getStorageLevel() != null && c.getStorageLevel() == 4 ? 3 : 2);
+        log.setArchiveBatchId(c.getArchiveBatchId());
+        return log;
     }
 }

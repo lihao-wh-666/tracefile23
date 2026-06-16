@@ -139,4 +139,26 @@ public class OperationLogController {
         }
         return value;
     }
+
+    @GetMapping("/page-cross-tier")
+    @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "操作日志", operation = "跨层级分页查询日志", operationType = 4, targetType = "operationLog")
+    public Result<IPage<Map<String, Object>>> pageCrossTier(
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer operationType,
+            @RequestParam(required = false) String module,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) String targetId,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "true") Boolean includeArchived,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        LocalDateTime startTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endTime = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        return Result.ok(operationLogService.pageCrossTier(current, size, keyword, operationType,
+                module, username, targetType, targetId, status, startTime, endTime, includeArchived));
+    }
 }

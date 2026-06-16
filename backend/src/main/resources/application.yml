@@ -61,3 +61,8 @@ knife4j:
   enable: true
   setting:
     language: zh-CN
+
+log:
+  archive:
+    cron: '0 0 2 * * ?'
+    enabled: true

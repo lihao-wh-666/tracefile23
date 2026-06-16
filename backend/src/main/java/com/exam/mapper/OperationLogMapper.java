@@ -3,8 +3,11 @@ package com.exam.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.exam.entity.OperationLog;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -34,4 +37,28 @@ public interface OperationLogMapper extends BaseMapper<OperationLog> {
 
     @Select("SELECT id, operation_type, target_type, target_id, before_state, after_state, user_agent, trace_id, checksum, previous_checksum FROM operation_log WHERE id = #{id}")
     OperationLog selectDetailWithExt(Long id);
+
+    @Select("SELECT COUNT(*) FROM operation_log WHERE create_time >= #{startTime} AND create_time < #{endTime} AND archive_status = 0")
+    Long countByTimeRangeAndStatus(@Param("startTime") LocalDateTime startTime,
+                                   @Param("endTime") LocalDateTime endTime);
+
+    @Select("SELECT * FROM operation_log WHERE create_time >= #{startTime} AND create_time < #{endTime} " +
+            "AND archive_status = 0 ORDER BY id ASC LIMIT #{offset}, #{limit}")
+    List<OperationLog> selectForMigration(@Param("startTime") LocalDateTime startTime,
+                                          @Param("endTime") LocalDateTime endTime,
+                                          @Param("offset") int offset,
+                                          @Param("limit") int limit);
+
+    @Update("<script>" +
+            "UPDATE operation_log SET archive_status = #{archiveStatus}, archive_batch_id = #{batchId} " +
+            "WHERE id IN <foreach item='id' collection='ids' open='(' separator=',' close=')'>#{id}</foreach>" +
+            "</script>")
+    int updateArchiveStatusByIds(@Param("ids") List<Long> ids,
+                                 @Param("archiveStatus") Integer archiveStatus,
+                                 @Param("batchId") String batchId);
+
+    @Update("<script>" +
+            "DELETE FROM operation_log WHERE id IN <foreach item='id' collection='ids' open='(' separator=',' close=')'>#{id}</foreach>" +
+            "</script>")
+    int deleteByIds(@Param("ids") List<Long> ids);
 }
