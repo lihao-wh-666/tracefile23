@@ -202,6 +202,13 @@ import { encryptPassword } from '../../utils/rsa'
 
 const roleMap = { 1: '管理员', 2: '教师', 3: '学生' }
 const roleTagMap = { 1: 'danger', 2: 'warning', 3: 'info' }
+
+const searchForm = reactive({
+  keyword: '',
+  role: '',
+  status: ''
+})
+
 const statusLoadingMap = reactive({})
 const unlockLoadingMap = reactive({})
 const refreshTick = ref(0)

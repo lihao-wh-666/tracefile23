@@ -687,17 +687,29 @@ const handleVerify = async (row) => {
 
 const handleExport = async (row) => {
   try {
-    const res = await exportArchivedLogs(row.batchId)
-    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+    const response = await exportArchivedLogs(row.batchId)
+    const blobData = response.data || response
+    const blob = new Blob([blobData], { type: 'text/csv;charset=utf-8;' })
+    
+    let fileName = `archive_log_${row.batchId}.csv`
+    const disposition = response.headers?.['content-disposition']
+    if (disposition) {
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+      if (match) {
+        fileName = decodeURIComponent(match[1] || match[2])
+      }
+    }
+    
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    const fileName = `archive_log_${row.batchId}.csv`
     link.download = fileName
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(link.href)
     ElMessage.success('导出成功')
   } catch (e) {
-    ElMessage.error('导出失败')
+    ElMessage.error(e?.message || '导出失败')
   }
 }
 

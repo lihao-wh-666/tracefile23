@@ -51,7 +51,7 @@ request.interceptors.request.use(
 )
 
 request.interceptors.response.use(
-  response => {
+  async response => {
     const traceId = response.headers['x-trace-id'] || response.config.traceId
 
     logger.debug('API请求成功', {
@@ -63,6 +63,24 @@ request.interceptors.response.use(
     })
 
     if (response.config.responseType === 'blob') {
+      const contentType = response.headers['content-type'] || ''
+      if (contentType.includes('application/json')) {
+        try {
+          const text = await response.data.text()
+          const res = JSON.parse(text)
+          if (res.code !== ERROR_CODE.SUCCESS) {
+            return errorHandler.handleError({
+              ...res,
+              traceId: res.traceId || traceId
+            }, {
+              showToast: true,
+              throwError: true
+            })
+          }
+        } catch (e) {
+          logger.error('解析blob错误响应失败', e)
+        }
+      }
       return response
     }
     const res = response.data

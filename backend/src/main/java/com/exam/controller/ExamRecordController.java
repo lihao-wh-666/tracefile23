@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.OutputStream;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -163,7 +164,9 @@ public class ExamRecordController {
         byte[] data = recordService.exportExcel(examId);
         String fileName = "成绩统计_" + System.currentTimeMillis() + ".xlsx";
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName);
         response.setContentLength(data.length);
         OutputStream out = response.getOutputStream();
         out.write(data);
@@ -177,7 +180,9 @@ public class ExamRecordController {
         byte[] data = recordService.exportCsv(examId);
         String fileName = "成绩统计_" + System.currentTimeMillis() + ".csv";
         response.setContentType("text/csv;charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName);
         response.setContentLength(data.length);
         OutputStream out = response.getOutputStream();
         out.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});
@@ -192,7 +197,9 @@ public class ExamRecordController {
         byte[] data = recordService.exportPdf(examId);
         String fileName = "成绩统计_" + System.currentTimeMillis() + ".pdf";
         response.setContentType("application/pdf");
-        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(fileName, "UTF-8"));
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName);
         response.setContentLength(data.length);
         OutputStream out = response.getOutputStream();
         out.write(data);

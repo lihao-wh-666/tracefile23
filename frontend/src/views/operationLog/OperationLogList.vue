@@ -573,17 +573,29 @@ const handleExport = async () => {
       startDate: searchForm.startDate ? searchForm.startDate.toISOString().slice(0, 10) : undefined,
       endDate: searchForm.endDate ? searchForm.endDate.toISOString().slice(0, 10) : undefined
     }
-    const res = await exportOperationLog(params)
-    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+    const response = await exportOperationLog(params)
+    const blobData = response.data || response
+    const blob = new Blob([blobData], { type: 'text/csv;charset=utf-8;' })
+    
+    let fileName = `operation_log_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`
+    const disposition = response.headers?.['content-disposition']
+    if (disposition) {
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+      if (match) {
+        fileName = decodeURIComponent(match[1] || match[2])
+      }
+    }
+    
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    const fileName = `operation_log_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.csv`
     link.download = fileName
+    document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
     URL.revokeObjectURL(link.href)
     ElMessage.success('导出成功')
   } catch (e) {
-    ElMessage.error('导出失败')
+    ElMessage.error(e?.message || '导出失败')
   }
 }
 

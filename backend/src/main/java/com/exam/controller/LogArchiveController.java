@@ -134,8 +134,9 @@ public class LogArchiveController {
 
         String fileName = "archive_log_" + batchId + ".csv";
         response.setContentType("text/csv;charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename="
-                + URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()));
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replace("+", "%20");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName);
 
         try (OutputStream out = response.getOutputStream()) {
             byte[] BOM = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
