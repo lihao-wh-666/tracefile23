@@ -112,6 +112,12 @@ const routes = [
         meta: { title: 'logArchive', roles: [1] }
       },
       {
+        path: 'log-masking',
+        name: 'LogMasking',
+        component: () => import('../views/logMasking/LogMasking.vue'),
+        meta: { title: 'logMasking', roles: [1] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
