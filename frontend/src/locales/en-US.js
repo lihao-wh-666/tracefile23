@@ -29,6 +29,7 @@ export default {
     personalScore: 'My Scores',
     user: 'User Management',
     systemConfig: 'System Config',
+    operationLog: 'Audit Logs',
     profile: 'Profile',
     settings: 'Settings'
   },

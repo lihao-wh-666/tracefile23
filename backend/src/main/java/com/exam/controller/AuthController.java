@@ -1,5 +1,6 @@
 package com.exam.controller;
 
+import com.exam.annotation.Log;
 import com.exam.common.Result;
 import com.exam.config.RsaConfig;
 import com.exam.dto.LoginDTO;
@@ -42,29 +43,34 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Log(module = "认证管理", operation = "用户登录", operationType = 5, targetType = "user")
     public Result<LoginVO> login(@RequestBody @Valid LoginDTO dto) {
         return Result.ok(authService.login(dto));
     }
 
     @PostMapping("/register")
+    @Log(module = "认证管理", operation = "用户注册", operationType = 1, targetType = "user", recordState = true)
     public Result<Void> register(@RequestBody @Valid RegisterDTO dto) {
         authService.register(dto);
         return Result.ok();
     }
 
     @PostMapping("/send-code")
+    @Log(module = "认证管理", operation = "发送验证码", operationType = 9, targetType = "user")
     public Result<Void> sendCode(@RequestBody @Valid SendCodeDTO dto) {
         authService.sendCode(dto);
         return Result.ok();
     }
 
     @PostMapping("/reset-password")
+    @Log(module = "认证管理", operation = "重置密码", operationType = 2, targetType = "user", recordState = true)
     public Result<Void> resetPassword(@RequestBody @Valid ResetPasswordDTO dto) {
         authService.resetPassword(dto);
         return Result.ok();
     }
 
     @PostMapping("/logout")
+    @Log(module = "认证管理", operation = "用户登出", operationType = 6, targetType = "user")
     public Result<Void> logout() {
         var authentication = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication();

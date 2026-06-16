@@ -29,6 +29,24 @@ public class OperationLog {
 
     private String errorMsg;
 
+    private Integer operationType;
+
+    private String targetType;
+
+    private String targetId;
+
+    private String beforeState;
+
+    private String afterState;
+
+    private String userAgent;
+
+    private String traceId;
+
+    private String checksum;
+
+    private String previousChecksum;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

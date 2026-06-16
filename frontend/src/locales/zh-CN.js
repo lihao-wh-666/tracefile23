@@ -29,6 +29,7 @@ export default {
     personalScore: '个人成绩台账',
     user: '用户管理',
     systemConfig: '系统参数管理',
+    operationLog: '操作日志留痕',
     profile: '个人中心',
     settings: '偏好设置'
   },

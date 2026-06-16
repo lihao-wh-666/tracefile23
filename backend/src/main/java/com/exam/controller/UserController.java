@@ -50,21 +50,21 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @Log(module = "个人中心", operation = "更新个人信息")
+    @Log(module = "个人中心", operation = "更新个人信息", operationType = 2, targetType = "user", recordState = true)
     public Result<Boolean> updateProfile(@RequestBody @Valid UpdateProfileDTO dto) {
         Long userId = getCurrentUserId();
         return Result.ok(userService.updateProfile(userId, dto));
     }
 
     @PutMapping("/password")
-    @Log(module = "个人中心", operation = "修改密码")
+    @Log(module = "个人中心", operation = "修改密码", operationType = 2, targetType = "user", recordState = true)
     public Result<Boolean> changePassword(@RequestBody @Valid ChangePasswordDTO dto) {
         Long userId = getCurrentUserId();
         return Result.ok(userService.changePassword(userId, dto));
     }
 
     @PostMapping("/avatar")
-    @Log(module = "个人中心", operation = "上传头像")
+    @Log(module = "个人中心", operation = "上传头像", operationType = 2, targetType = "user", recordState = true)
     public Result<String> uploadAvatar(@RequestPart("file") MultipartFile file) throws IOException {
         Long userId = getCurrentUserId();
         if (file.isEmpty()) {
@@ -102,7 +102,7 @@ public class UserController {
 
     @GetMapping("/page")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "分页查询用户列表")
+    @Log(module = "用户管理", operation = "分页查询用户列表", operationType = 4, targetType = "user")
     public Result<IPage<User>> page(@RequestParam(defaultValue = "1") Integer current,
                                     @RequestParam(defaultValue = "10") Integer size,
                                     @RequestParam(required = false) String keyword,
@@ -113,28 +113,28 @@ public class UserController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "查询用户详情")
+    @Log(module = "用户管理", operation = "查询用户详情", operationType = 4, targetType = "user")
     public Result<User> getById(@PathVariable Long id) {
         return Result.ok(userService.getById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "新增用户")
+    @Log(module = "用户管理", operation = "新增用户", operationType = 1, targetType = "user", recordState = true)
     public Result<Boolean> create(@RequestBody @Valid UserDTO dto) {
         return Result.ok(userService.save(dto));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "编辑用户")
+    @Log(module = "用户管理", operation = "编辑用户", operationType = 2, targetType = "user", recordState = true)
     public Result<Boolean> update(@PathVariable Long id, @RequestBody UserDTO dto) {
         return Result.ok(userService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "删除用户")
+    @Log(module = "用户管理", operation = "删除用户", operationType = 3, targetType = "user", recordState = true)
     public Result<Boolean> remove(@PathVariable Long id) {
         Long currentUserId = getCurrentUserId();
         if (currentUserId.equals(id)) {
@@ -145,7 +145,7 @@ public class UserController {
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "修改用户状态")
+    @Log(module = "用户管理", operation = "修改用户状态", operationType = 2, targetType = "user", recordState = true)
     public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         Long currentUserId = getCurrentUserId();
         if (currentUserId.equals(id) && status == Constants.USER_STATUS_DISABLED) {
@@ -156,7 +156,7 @@ public class UserController {
 
     @PutMapping("/{id}/unlock")
     @PreAuthorize("hasRole('1')")
-    @Log(module = "用户管理", operation = "解锁用户")
+    @Log(module = "用户管理", operation = "解锁用户", operationType = 2, targetType = "user", recordState = true)
     public Result<Boolean> unlockUser(@PathVariable Long id) {
         return Result.ok(userService.unlockUser(id));
     }

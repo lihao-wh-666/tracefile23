@@ -29,6 +29,7 @@ export default {
     personalScore: '個人成績',
     user: 'ユーザー管理',
     systemConfig: 'システム設定',
+    operationLog: '操作ログ監査',
     profile: 'プロフィール',
     settings: '個人設定'
   },

@@ -8,4 +8,7 @@ import java.lang.annotation.*;
 public @interface Log {
     String module() default "";
     String operation() default "";
+    int operationType() default 9;
+    String targetType() default "";
+    boolean recordState() default false;
 }

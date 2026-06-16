@@ -1,6 +1,8 @@
 package com.exam.aspect;
 
 import com.exam.annotation.Log;
+import com.exam.common.TraceIdContext;
+import com.exam.entity.OperationLog;
 import com.exam.entity.User;
 import com.exam.mapper.UserMapper;
 import com.exam.service.OperationLogService;
@@ -44,9 +46,13 @@ public class LogAspect {
 
         String module = logAnnotation.module();
         String operation = logAnnotation.operation();
+        Integer operationType = logAnnotation.operationType();
+        String targetType = logAnnotation.targetType();
+        boolean recordState = logAnnotation.recordState();
         String methodName = point.getTarget().getClass().getName() + "." + method.getName();
 
         String params = "";
+        String targetId = "";
         try {
             Object[] args = point.getArgs();
             if (args != null && args.length > 0) {
@@ -61,6 +67,21 @@ public class LogAspect {
                     } else {
                         filteredArgs.add(arg);
                     }
+                    if (arg instanceof Long || arg instanceof String) {
+                        if (targetId.isEmpty() && (method.getName().contains("getById")
+                                || method.getName().contains("update")
+                                || method.getName().contains("remove")
+                                || method.getName().contains("delete")
+                                || method.getName().contains("unlock")
+                                || method.getName().contains("status"))) {
+                            if (method.getParameters().length > 0) {
+                                String firstParamName = method.getParameters()[0].getName();
+                                if ("id".equals(firstParamName)) {
+                                    targetId = arg.toString();
+                                }
+                            }
+                        }
+                    }
                 }
                 params = objectMapper.writeValueAsString(filteredArgs);
                 if (params.length() > 2000) {
@@ -74,14 +95,20 @@ public class LogAspect {
         String ip = "";
         String username = "";
         Long userId = null;
+        String userAgent = "";
+        String traceId = TraceIdContext.getTraceId();
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
                 ip = IpUtil.getIpAddr(request);
+                userAgent = request.getHeader("User-Agent");
+                if (userAgent != null && userAgent.length() > 500) {
+                    userAgent = userAgent.substring(0, 500);
+                }
             }
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal != null) {
+            if (principal != null && !"anonymousUser".equals(principal.toString())) {
                 userId = Long.parseLong(principal.toString());
                 User user = userMapper.selectById(userId);
                 if (user != null) {
@@ -95,6 +122,16 @@ public class LogAspect {
         Integer status = 1;
         String errorMsg = "";
         Object result = null;
+        String beforeState = "";
+        String afterState = "";
+
+        if (recordState && !targetId.isEmpty() && !targetType.isEmpty()) {
+            try {
+                beforeState = operationLogService.getTargetState(targetType, targetId);
+            } catch (Exception e) {
+                beforeState = "";
+            }
+        }
 
         try {
             result = point.proceed();
@@ -106,8 +143,33 @@ public class LogAspect {
             }
             throw e;
         } finally {
-            operationLogService.saveLog(userId, username, module, operation,
-                    methodName, params, ip, status, errorMsg);
+            if (recordState && status == 1 && !targetId.isEmpty() && !targetType.isEmpty()) {
+                try {
+                    afterState = operationLogService.getTargetState(targetType, targetId);
+                } catch (Exception e) {
+                    afterState = "";
+                }
+            }
+
+            OperationLog log = new OperationLog();
+            log.setUserId(userId);
+            log.setUsername(username);
+            log.setModule(module);
+            log.setOperation(operation);
+            log.setMethod(methodName);
+            log.setParams(params);
+            log.setIp(ip);
+            log.setStatus(status);
+            log.setErrorMsg(errorMsg);
+            log.setOperationType(operationType);
+            log.setTargetType(targetType);
+            log.setTargetId(targetId.isEmpty() ? null : targetId);
+            log.setBeforeState(beforeState.isEmpty() ? null : beforeState);
+            log.setAfterState(afterState.isEmpty() ? null : afterState);
+            log.setUserAgent(userAgent.isEmpty() ? null : userAgent);
+            log.setTraceId(traceId);
+
+            operationLogService.saveLogWithIntegrity(log);
         }
 
         return result;

@@ -100,6 +100,12 @@ const routes = [
         meta: { title: 'systemConfig', roles: [1] }
       },
       {
+        path: 'operation-log',
+        name: 'OperationLogList',
+        component: () => import('../views/operationLog/OperationLogList.vue'),
+        meta: { title: 'operationLog', roles: [1] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),

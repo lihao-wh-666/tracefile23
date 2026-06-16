@@ -1,6 +1,7 @@
 package com.exam.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.exam.annotation.Log;
 import com.exam.common.Result;
 import com.exam.entity.SystemConfig;
 import com.exam.service.SystemConfigService;
@@ -52,18 +53,21 @@ public class SystemConfigController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "系统参数管理", operation = "新增系统参数", operationType = 1, targetType = "systemConfig", recordState = true)
     public Result<Boolean> save(@RequestBody @Valid SystemConfig systemConfig) {
         return Result.ok(systemConfigService.save(systemConfig));
     }
 
     @PutMapping
     @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "系统参数管理", operation = "编辑系统参数", operationType = 2, targetType = "systemConfig", recordState = true)
     public Result<Boolean> update(@RequestBody @Valid SystemConfig systemConfig) {
         return Result.ok(systemConfigService.updateById(systemConfig));
     }
 
     @PutMapping("/update-by-key")
     @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "系统参数管理", operation = "按键名更新系统参数", operationType = 2, targetType = "systemConfig", recordState = true)
     public Result<Boolean> updateByKey(@RequestParam String configKey,
                                        @RequestParam String configValue) {
         return Result.ok(systemConfigService.updateByKey(configKey, configValue));
@@ -71,12 +75,14 @@ public class SystemConfigController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "系统参数管理", operation = "删除系统参数", operationType = 3, targetType = "systemConfig", recordState = true)
     public Result<Boolean> remove(@PathVariable Long id) {
         return Result.ok(systemConfigService.removeById(id));
     }
 
     @PostMapping("/refresh-cache")
     @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "系统参数管理", operation = "刷新系统参数缓存", operationType = 9, targetType = "systemConfig")
     public Result<Boolean> refreshCache() {
         systemConfigService.refreshCache();
         return Result.ok(true);
