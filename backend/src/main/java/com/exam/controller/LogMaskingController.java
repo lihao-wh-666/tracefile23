@@ -1,10 +1,13 @@
 package com.exam.controller;
 
+import com.exam.annotation.Log;
 import com.exam.common.Result;
 import com.exam.service.LogMaskingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,67 +21,71 @@ import java.util.Map;
 @RequestMapping("/log-masking")
 public class LogMaskingController {
 
-    private final LogMaskingService logMaskingService;
-
-    public LogMaskingController(LogMaskingService logMaskingService) {
-        this.logMaskingService = logMaskingService;
-    }
+    @Autowired
+    private LogMaskingService logMaskingService;
 
     @GetMapping("/config")
+    @PreAuthorize("hasAnyRole('1')")
     public Result<Map<String, Object>> getConfig() {
         try {
             Map<String, Object> config = logMaskingService.getConfig();
-            return Result.success(config);
+            return Result.ok(config);
         } catch (Exception e) {
-            return Result.error("获取配置失败: " + e.getMessage());
+            return Result.fail("获取配置失败: " + e.getMessage());
         }
     }
 
     @PostMapping("/mask")
+    @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "日志脱敏", operation = "脱敏处理文本内容", operationType = 4, targetType = "logMasking")
     public Result<Map<String, Object>> maskContent(@RequestBody Map<String, String> request) {
         try {
             String content = request.get("content");
             String format = request.get("format");
             Map<String, Object> result = logMaskingService.maskLogContent(content, format);
             if (Boolean.TRUE.equals(result.get("success"))) {
-                return Result.success(result);
+                return Result.ok(result);
             } else {
-                return Result.error((String) result.get("message"));
+                return Result.fail((String) result.get("message"));
             }
         } catch (Exception e) {
-            return Result.error("脱敏处理失败: " + e.getMessage());
+            return Result.fail("脱敏处理失败: " + e.getMessage());
         }
     }
 
     @PostMapping("/mask-file")
+    @PreAuthorize("hasAnyRole('1')")
+    @Log(module = "日志脱敏", operation = "脱敏处理日志文件", operationType = 7, targetType = "logMasking")
     public Result<Map<String, Object>> maskFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "format", required = false, defaultValue = "auto") String format) {
         try {
             Map<String, Object> result = logMaskingService.maskLogFile(file, format);
             if (Boolean.TRUE.equals(result.get("success"))) {
-                return Result.success(result);
+                return Result.ok(result);
             } else {
-                return Result.error((String) result.get("message"));
+                return Result.fail((String) result.get("message"));
             }
         } catch (Exception e) {
-            return Result.error("文件处理失败: " + e.getMessage());
+            return Result.fail("文件处理失败: " + e.getMessage());
         }
     }
 
     @PostMapping("/compare")
+    @PreAuthorize("hasAnyRole('1')")
     public Result<Map<String, Object>> compareLogs(@RequestBody Map<String, String> request) {
         try {
             String original = request.get("original");
             String masked = request.get("masked");
             Map<String, Object> result = logMaskingService.compareLogs(original, masked);
-            return Result.success(result);
+            return Result.ok(result);
         } catch (Exception e) {
-            return Result.error("对比失败: " + e.getMessage());
+            return Result.fail("对比失败: " + e.getMessage());
         }
     }
 
     @GetMapping("/download/{taskId}")
+    @PreAuthorize("hasAnyRole('1')")
     public ResponseEntity<byte[]> downloadMaskedFile(@PathVariable String taskId) {
         try {
             byte[] content = logMaskingService.getMaskedFileContent(taskId);
@@ -100,6 +107,7 @@ public class LogMaskingController {
     }
 
     @PostMapping("/preview")
+    @PreAuthorize("hasAnyRole('1')")
     public Result<Map<String, Object>> previewMasking(@RequestBody Map<String, String> request) {
         try {
             String content = request.get("content");
@@ -119,9 +127,9 @@ public class LogMaskingController {
             result.put("detectedFormat", detectedFormat);
             result.put("comparison", comparison);
 
-            return Result.success(result);
+            return Result.ok(result);
         } catch (Exception e) {
-            return Result.error("预览失败: " + e.getMessage());
+            return Result.fail("预览失败: " + e.getMessage());
         }
     }
 }

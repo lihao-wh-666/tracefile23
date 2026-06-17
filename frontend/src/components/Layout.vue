@@ -88,6 +88,10 @@
           <el-icon><Lock /></el-icon>
           <span>{{ t('menu.logMasking') }}</span>
         </el-menu-item>
+        <el-menu-item index="/video" v-if="hasRole([1, 2, 3])">
+          <el-icon><VideoPlay /></el-icon>
+          <span>{{ t('menu.video') }}</span>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><Setting /></el-icon>
           <span>{{ t('menu.profile') }}</span>
@@ -153,7 +157,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon, DataBoard, Folder, Lock } from '@element-plus/icons-vue'
+import { HomeFilled, Document, Notebook, EditPen, DataAnalysis, User, ArrowDown, Menu, Close, UserFilled, Setting, Reading, Tools, TrendCharts, MagicStick, Sunny, Moon, DataBoard, Folder, Lock, VideoPlay } from '@element-plus/icons-vue'
 import { useUserStore } from '../store/user'
 import { usePreferencesStore } from '../store/preferences'
 

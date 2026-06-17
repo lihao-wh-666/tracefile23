@@ -36,6 +36,8 @@ export default {
     operationLog: 'Audit Logs',
     logArchive: 'Log Archive',
     logMasking: 'Log Masking',
+    video: 'Video Courses',
+    videoDetail: 'Video Detail',
     profile: 'Profile',
     settings: 'Settings'
   },
@@ -136,5 +138,28 @@ export default {
     changePassword: 'Change Password',
     logout: 'Logout',
     user: 'User'
+  },
+  video: {
+    title: 'Video Courses',
+    searchPlaceholder: 'Search video titles, keywords...',
+    allCategories: 'All Categories',
+    noVideo: 'No videos found',
+    backToList: 'Back to List',
+    views: 'views',
+    collect: 'Collect',
+    share: 'Share',
+    courseOutline: 'Course Outline',
+    chapters: 'chapters',
+    free: 'Free',
+    courseIntro: 'Course Introduction',
+    teacherInfo: 'Instructor Info',
+    relatedVideos: 'Related Videos',
+    noRelated: 'No related videos',
+    courses: 'courses',
+    students: 'students',
+    likeSuccess: 'Liked',
+    cancelLike: 'Unliked',
+    collectSuccess: 'Collected',
+    cancelCollect: 'Uncollected'
   }
 }

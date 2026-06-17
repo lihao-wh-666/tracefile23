@@ -36,6 +36,8 @@ export default {
     operationLog: '操作ログ監査',
     logArchive: 'ログアーカイブ',
     logMasking: 'ログマスキング',
+    video: '学習動画',
+    videoDetail: '動画詳細',
     profile: 'プロフィール',
     settings: '個人設定'
   },
@@ -136,5 +138,28 @@ export default {
     changePassword: 'パスワードを変更',
     logout: 'ログアウト',
     user: 'ユーザー'
+  },
+  video: {
+    title: '学習動画',
+    searchPlaceholder: '動画タイトル、キーワードを検索...',
+    allCategories: 'すべてのカテゴリ',
+    noVideo: '動画がありません',
+    backToList: 'リストに戻る',
+    views: '回視聴',
+    collect: 'コレクション',
+    share: 'シェア',
+    courseOutline: 'コース概要',
+    chapters: 'チャプター',
+    free: '無料',
+    courseIntro: 'コース紹介',
+    teacherInfo: '講師情報',
+    relatedVideos: '関連動画',
+    noRelated: '関連動画がありません',
+    courses: 'コース',
+    students: '人の受講生',
+    likeSuccess: 'いいねしました',
+    cancelLike: 'いいねを解除しました',
+    collectSuccess: 'コレクションしました',
+    cancelCollect: 'コレクションを解除しました'
   }
 }

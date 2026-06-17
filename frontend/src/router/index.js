@@ -118,6 +118,18 @@ const routes = [
         meta: { title: 'logMasking', roles: [1] }
       },
       {
+        path: 'video',
+        name: 'VideoList',
+        component: () => import('../views/video/VideoList.vue'),
+        meta: { title: 'video', roles: [1, 2, 3] }
+      },
+      {
+        path: 'video/:id',
+        name: 'VideoDetail',
+        component: () => import('../views/video/VideoDetail.vue'),
+        meta: { title: 'videoDetail', roles: [1, 2, 3] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),

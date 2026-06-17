@@ -40,7 +40,7 @@ public class ExamSwitchRecordServiceImpl implements ExamSwitchRecordService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "考试记录不存在");
         }
         if (!record.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.PERMISSION_DENIED, "无权限操作此记录");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限操作此记录");
         }
 
         ExamSwitchRecord switchRecord = new ExamSwitchRecord();
@@ -93,7 +93,7 @@ public class ExamSwitchRecordServiceImpl implements ExamSwitchRecordService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "考试记录不存在");
         }
         if (userRole != null && userRole == 3 && !record.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.PERMISSION_DENIED, "无权限查看此记录");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限查看此记录");
         }
         return switchRecordMapper.selectByRecordId(recordId);
     }
@@ -105,7 +105,7 @@ public class ExamSwitchRecordServiceImpl implements ExamSwitchRecordService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "考试记录不存在");
         }
         if (userRole != null && userRole == 3 && !record.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.PERMISSION_DENIED, "无权限查看此记录");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限查看此记录");
         }
 
         ExamSwitchStatisticsVO vo = new ExamSwitchStatisticsVO();
@@ -147,7 +147,7 @@ public class ExamSwitchRecordServiceImpl implements ExamSwitchRecordService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "考试记录不存在");
         }
         if (!record.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.PERMISSION_DENIED, "无权限操作此记录");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权限操作此记录");
         }
         record.setWarningCount(record.getWarningCount() == null ? 1 : record.getWarningCount() + 1);
         return examRecordMapper.updateById(record) > 0;

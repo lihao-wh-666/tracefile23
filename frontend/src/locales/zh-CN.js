@@ -36,6 +36,8 @@ export default {
     operationLog: '操作日志留痕',
     logArchive: '日志归档管理',
     logMasking: '日志脱敏处理',
+    video: '教学视频',
+    videoDetail: '视频详情',
     profile: '个人中心',
     settings: '偏好设置'
   },
@@ -136,5 +138,28 @@ export default {
     changePassword: '修改密码',
     logout: '退出登录',
     user: '用户'
+  },
+  video: {
+    title: '教学视频',
+    searchPlaceholder: '搜索视频标题、关键词...',
+    allCategories: '全部分类',
+    noVideo: '暂无视频',
+    backToList: '返回列表',
+    views: '次观看',
+    collect: '收藏',
+    share: '分享',
+    courseOutline: '课程大纲',
+    chapters: '个章节',
+    free: '免费',
+    courseIntro: '课程简介',
+    teacherInfo: '讲师信息',
+    relatedVideos: '相关推荐',
+    noRelated: '暂无相关视频',
+    courses: '门课程',
+    students: '位学员',
+    likeSuccess: '点赞成功',
+    cancelLike: '已取消点赞',
+    collectSuccess: '收藏成功',
+    cancelCollect: '已取消收藏'
   }
 }
