@@ -141,7 +141,8 @@ export default {
   },
   video: {
     title: 'Video Courses',
-    searchPlaceholder: 'Search video titles, keywords...',
+    videoDetail: 'Video Detail',
+    searchPlaceholder: 'Search video title, keywords...',
     allCategories: 'All Categories',
     noVideo: 'No videos found',
     backToList: 'Back to List',

@@ -1,5 +1,6 @@
 <template>
   <div class="video-detail-page" v-loading="loading">
+    <h2 class="page-title">{{ t('video.videoDetail') }}</h2>
     <div class="back-btn" @click="goBack">
       <el-icon><ArrowLeft /></el-icon>
       <span>{{ t('video.backToList') }}</span>
@@ -244,7 +245,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -311,7 +312,7 @@ const difficultyType = computed(() => {
 const STORAGE_KEY_PREFIX = 'video_progress_'
 
 const getStorageKey = () => {
-  return STORAGE_KEY_PREFIX + (route.params.id || 'default')
+  return STORAGE_KEY_PREFIX + (route.query.id || 'default')
 }
 
 const loadSavedProgress = () => {
@@ -367,7 +368,7 @@ const stopProgressSaver = () => {
 const loadVideoDetail = async () => {
   loading.value = true
   try {
-    const id = route.params.id
+    const id = route.query.id
     const res = await getVideoDetail(id)
     videoDetail.value = res.data
     if (videoDetail.value?.outline?.length > 0) {
@@ -384,7 +385,7 @@ const loadVideoDetail = async () => {
 }
 
 const loadRelatedVideos = async () => {
-  const id = route.params.id
+  const id = route.query.id
   const res = await getRelatedVideoList(id, 8)
   relatedVideos.value = res.data
 }
@@ -539,9 +540,7 @@ const goToVideo = (id) => {
   currentChapter.value = 1
   showResumeDialog.value = false
   savedProgress.value = 0
-  router.push(`/video/${id}`)
-  loadVideoDetail()
-  loadRelatedVideos()
+  router.push({ path: '/video/detail', query: { id } })
 }
 
 const formatCount = (count) => {
@@ -560,6 +559,16 @@ const formatTime = (seconds) => {
   }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
+
+watch(
+  () => route.query.id,
+  (newId) => {
+    if (newId) {
+      loadVideoDetail()
+      loadRelatedVideos()
+    }
+  }
+)
 
 onMounted(() => {
   loadVideoDetail()
@@ -583,6 +592,13 @@ onUnmounted(() => {
 .video-detail-page {
   width: 100%;
   position: relative;
+}
+
+.page-title {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .back-btn {
@@ -621,7 +637,7 @@ onUnmounted(() => {
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .video-player {

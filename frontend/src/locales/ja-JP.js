@@ -141,6 +141,7 @@ export default {
   },
   video: {
     title: '学習動画',
+    videoDetail: '動画詳細',
     searchPlaceholder: '動画タイトル、キーワードを検索...',
     allCategories: 'すべてのカテゴリ',
     noVideo: '動画がありません',

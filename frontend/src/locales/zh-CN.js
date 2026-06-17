@@ -141,6 +141,7 @@ export default {
   },
   video: {
     title: '教学视频',
+    videoDetail: '视频详情',
     searchPlaceholder: '搜索视频标题、关键词...',
     allCategories: '全部分类',
     noVideo: '暂无视频',

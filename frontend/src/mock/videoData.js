@@ -627,7 +627,8 @@ export const getVideos = () => videos
 export const getTeacherById = (id) => teachers.find(t => t.id === id)
 
 export const getVideoById = (id) => {
-  const video = videos.find(v => v.id === id)
+  const videoId = Number(id)
+  const video = videos.find(v => v.id === videoId)
   if (!video) return null
   const teacher = getTeacherById(video.teacherId)
   const outlineIndex = (video.id - 1) % courseOutlines.length
@@ -685,11 +686,12 @@ export const videoQualities = [
 ]
 
 export const getRelatedVideos = (videoId, limit = 6) => {
-  const video = videos.find(v => v.id === videoId)
+  const id = Number(videoId)
+  const video = videos.find(v => v.id === id)
   if (!video) return []
   
   const related = videos
-    .filter(v => v.id !== videoId && (v.categoryId === video.categoryId || v.tags.some(t => video.tags.includes(t))))
+    .filter(v => v.id !== id && (v.categoryId === video.categoryId || v.tags.some(t => video.tags.includes(t))))
     .sort((a, b) => b.viewCount - a.viewCount)
     .slice(0, limit)
   

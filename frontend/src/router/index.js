@@ -124,7 +124,7 @@ const routes = [
         meta: { title: 'video', roles: [1, 2, 3] }
       },
       {
-        path: 'video/:id',
+        path: 'video/detail',
         name: 'VideoDetail',
         component: () => import('../views/video/VideoDetail.vue'),
         meta: { title: 'videoDetail', roles: [1, 2, 3] }

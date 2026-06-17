@@ -169,7 +169,7 @@ const handleSizeChange = () => {
 }
 
 const goToDetail = (id) => {
-  router.push(`/video/${id}`)
+  router.push({ path: '/video/detail', query: { id } })
 }
 
 const formatCount = (count) => {
@@ -188,6 +188,13 @@ onMounted(() => {
 <style scoped>
 .video-list-page {
   width: 100%;
+}
+
+.page-title {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .search-card {
