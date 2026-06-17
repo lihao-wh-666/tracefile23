@@ -88,10 +88,21 @@
           <el-icon><Lock /></el-icon>
           <span>{{ t('menu.logMasking') }}</span>
         </el-menu-item>
-        <el-menu-item index="/video" v-if="hasRole([1, 2, 3])">
-          <el-icon><VideoPlay /></el-icon>
-          <span>{{ t('menu.video') }}</span>
-        </el-menu-item>
+        <el-sub-menu index="video" v-if="hasRole([1, 2, 3])">
+          <template #title>
+            <el-icon><VideoPlay /></el-icon>
+            <span>{{ t('menu.video') }}</span>
+          </template>
+          <el-menu-item index="/video" v-if="hasRole([1, 2, 3])">
+            <span>{{ t('menu.videoList') }}</span>
+          </el-menu-item>
+          <el-menu-item index="/video-manage" v-if="hasRole([1, 2])">
+            <span>{{ t('menu.videoManage') }}</span>
+          </el-menu-item>
+          <el-menu-item index="/video-category" v-if="hasRole([1, 2])">
+            <span>{{ t('menu.videoCategory') }}</span>
+          </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/profile">
           <el-icon><Setting /></el-icon>
           <span>{{ t('menu.profile') }}</span>

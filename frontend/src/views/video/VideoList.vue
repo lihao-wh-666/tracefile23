@@ -40,7 +40,7 @@
         @click="goToDetail(video.id)"
       >
         <div class="video-cover">
-          <img :src="video.cover" :alt="video.title" class="cover-img" />
+          <img :src="getImageUrl(video.coverUrl)" :alt="video.title" class="cover-img" />
           <div class="video-duration">{{ video.duration }}</div>
           <div class="video-overlay">
             <el-icon class="play-icon"><VideoPlay /></el-icon>
@@ -62,8 +62,8 @@
             <span class="video-category">{{ video.categoryName }}</span>
             <span class="video-date">{{ video.publishDate }}</span>
           </div>
-          <div class="video-tags">
-            <el-tag v-for="tag in video.tags.slice(0, 3)" :key="tag" size="small" type="info" effect="light">
+          <div class="video-tags" v-if="video.tagList && video.tagList.length > 0">
+            <el-tag v-for="tag in video.tagList.slice(0, 3)" :key="tag" size="small" type="info" effect="light">
               {{ tag }}
             </el-tag>
           </div>
@@ -177,6 +177,13 @@ const formatCount = (count) => {
     return (count / 10000).toFixed(1) + '万'
   }
   return count.toLocaleString()
+}
+
+const getImageUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/api')) return url
+  return '/api' + url
 }
 
 onMounted(() => {

@@ -11,7 +11,23 @@
         <div class="video-player-card">
           <div class="video-player" ref="playerContainerRef">
             <div class="player-wrapper">
-              <img :src="videoDetail.cover" :alt="videoDetail.title" class="poster-img" :class="{ blurred: isPlaying }" />
+              <video
+                v-if="isPlaying && videoDetail.videoUrl"
+                :src="getVideoUrl(videoDetail.videoUrl)"
+                controls
+                autoplay
+                style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: #000"
+                :poster="getImageUrl(videoDetail.coverUrl)"
+              >
+                您的浏览器不支持视频播放
+              </video>
+              <img
+                v-else
+                :src="getImageUrl(videoDetail.coverUrl)"
+                :alt="videoDetail.title"
+                class="poster-img"
+                :class="{ blurred: isPlaying }"
+              />
               <div class="player-overlay" @click="togglePlay" v-if="!isPlaying">
                 <div class="play-button">
                   <el-icon :size="64"><VideoPlay /></el-icon>
@@ -130,7 +146,7 @@
           </div>
         </div>
 
-        <el-card shadow="hover" class="section-card">
+        <el-card shadow="hover" class="section-card" v-if="false">
           <template #header>
             <div class="card-header">
               <span class="section-title">{{ t('video.courseOutline') }}</span>
@@ -167,39 +183,33 @@
           <div class="course-intro">
             <p>{{ videoDetail.description }}</p>
             <div class="tag-list">
-              <el-tag v-for="tag in videoDetail.tags" :key="tag" size="small" effect="plain">
+              <el-tag v-for="tag in (videoDetail.tagList || [])" :key="tag" size="small" effect="plain">
                 {{ tag }}
               </el-tag>
             </div>
           </div>
         </el-card>
 
-        <el-card shadow="hover" class="section-card">
+        <el-card shadow="hover" class="section-card" v-if="videoDetail.categoryName">
           <template #header>
-            <span class="section-title">{{ t('video.teacherInfo') }}</span>
+            <span class="section-title">{{ t('video.category') }}</span>
           </template>
-          <div class="teacher-info" v-if="videoDetail.teacher">
-            <div class="teacher-avatar">
-              <el-avatar :size="64">
-                <el-icon :size="32"><UserFilled /></el-icon>
-              </el-avatar>
-            </div>
-            <div class="teacher-detail">
-              <div class="teacher-header">
-                <h3 class="teacher-name">{{ videoDetail.teacher.name }}</h3>
-                <el-tag size="small" type="primary" effect="light">{{ videoDetail.teacher.title }}</el-tag>
+          <div class="category-info">
+            <el-tag type="primary" size="large">{{ videoDetail.categoryName }}</el-tag>
+            <div class="video-stats" style="margin-top: 16px">
+              <div class="stat-item">
+                <span class="stat-number">{{ formatCount(videoDetail.viewCount) }}</span>
+                <span class="stat-label">{{ t('video.views') }}</span>
               </div>
-              <p class="teacher-desc">{{ videoDetail.teacher.description }}</p>
-              <div class="teacher-stats">
-                <div class="stat-item">
-                  <span class="stat-number">{{ videoDetail.teacher.courses }}</span>
-                  <span class="stat-label">{{ t('video.courses') }}</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                  <span class="stat-number">{{ formatCount(videoDetail.teacher.students) }}</span>
-                  <span class="stat-label">{{ t('video.students') }}</span>
-                </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-number">{{ formatCount(videoDetail.likeCount) }}</span>
+                <span class="stat-label">{{ t('video.likes') }}</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-number">{{ videoDetail.rating }}</span>
+                <span class="stat-label">{{ t('video.rating') }}</span>
               </div>
             </div>
           </div>
@@ -219,7 +229,7 @@
               @click="goToVideo(item.id)"
             >
               <div class="related-cover">
-                <img :src="item.cover" :alt="item.title" />
+                <img :src="getImageUrl(item.coverUrl)" :alt="item.title" />
                 <span class="related-duration">{{ item.duration }}</span>
               </div>
               <div class="related-info">
@@ -253,8 +263,7 @@ import {
   Share, UserFilled, FullScreen, Aim
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getVideoDetail, getRelatedVideoList } from '../../api/video'
-import { videoQualities } from '../../mock/videoData'
+import { getVideoDetail, getRelatedVideos } from '../../api/video'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -281,7 +290,23 @@ let playTimer = null
 let saveProgressTimer = null
 
 const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
-const qualityOptions = videoQualities
+const qualityOptions = [
+  { key: '360p', resolution: '360P' },
+  { key: '720p', resolution: '720P' },
+  { key: '1080p', resolution: '1080P' },
+  { key: '4k', resolution: '4K' }
+]
+
+const getImageUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  if (url.startsWith('/api')) return url
+  return '/api' + url
+}
+
+const getVideoUrl = (url) => {
+  return getImageUrl(url)
+}
 
 const progressPercent = computed(() => {
   if (totalTime.value === 0) return 0
@@ -386,7 +411,7 @@ const loadVideoDetail = async () => {
 
 const loadRelatedVideos = async () => {
   const id = route.query.id
-  const res = await getRelatedVideoList(id, 8)
+  const res = await getRelatedVideos(id, 8)
   relatedVideos.value = res.data
 }
 

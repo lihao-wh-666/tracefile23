@@ -130,6 +130,18 @@ const routes = [
         meta: { title: 'videoDetail', roles: [1, 2, 3] }
       },
       {
+        path: 'video-manage',
+        name: 'VideoManage',
+        component: () => import('../views/video/VideoManage.vue'),
+        meta: { title: 'videoManage', roles: [1, 2] }
+      },
+      {
+        path: 'video-category',
+        name: 'VideoCategoryManage',
+        component: () => import('../views/video/VideoCategoryManage.vue'),
+        meta: { title: 'videoCategory', roles: [1, 2] }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/profile/Profile.vue'),
