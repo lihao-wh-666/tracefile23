@@ -160,6 +160,18 @@ export default {
     likeSuccess: 'いいねしました',
     cancelLike: 'いいねを解除しました',
     collectSuccess: 'コレクションしました',
-    cancelCollect: 'コレクションを解除しました'
+    cancelCollect: 'コレクションを解除しました',
+    playbackSpeed: '再生速度',
+    quality: '画質',
+    quality360p: 'SD 360P',
+    quality720p: 'HD 720P',
+    quality1080p: 'FHD 1080P',
+    quality4k: '4K UHD',
+    fullscreen: 'フルスクリーン',
+    exitFullscreen: 'フルスクリーンを終了',
+    resumePlayback: '再生を再開',
+    resumeFrom: '{time}から再生',
+    playFromStart: '最初から再生',
+    playbackMemory: '再生メモリー'
   }
 }

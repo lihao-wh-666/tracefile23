@@ -677,6 +677,13 @@ export const getVideoList = (params = {}) => {
   }
 }
 
+export const videoQualities = [
+  { key: '360p', label: '标清', resolution: '360P' },
+  { key: '720p', label: '高清', resolution: '720P' },
+  { key: '1080p', label: '超清', resolution: '1080P' },
+  { key: '4k', label: '蓝光', resolution: '4K' }
+]
+
 export const getRelatedVideos = (videoId, limit = 6) => {
   const video = videos.find(v => v.id === videoId)
   if (!video) return []

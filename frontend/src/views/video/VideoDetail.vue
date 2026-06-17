@@ -8,26 +8,90 @@
     <div class="detail-content" v-if="videoDetail">
       <div class="main-content">
         <div class="video-player-card">
-          <div class="video-player">
+          <div class="video-player" ref="playerContainerRef">
             <div class="player-wrapper">
-              <img :src="videoDetail.cover" :alt="videoDetail.title" class="poster-img" />
-              <div class="player-overlay" @click="togglePlay">
-                <div class="play-button" v-if="!isPlaying">
+              <img :src="videoDetail.cover" :alt="videoDetail.title" class="poster-img" :class="{ blurred: isPlaying }" />
+              <div class="player-overlay" @click="togglePlay" v-if="!isPlaying">
+                <div class="play-button">
                   <el-icon :size="64"><VideoPlay /></el-icon>
                 </div>
               </div>
-              <div class="player-controls" v-if="isPlaying">
-                <div class="progress-bar">
+
+              <div class="resume-dialog" v-if="showResumeDialog && savedProgress > 0" @click.stop>
+                <div class="resume-content">
+                  <div class="resume-icon">
+                    <el-icon :size="32"><VideoPlay /></el-icon>
+                  </div>
+                  <div class="resume-text">
+                    <div class="resume-title">{{ t('video.resumePlayback') }}</div>
+                    <div class="resume-desc">{{ t('video.resumeFrom', { time: formatTime(savedProgress) }) }}</div>
+                  </div>
+                  <div class="resume-actions">
+                    <el-button type="primary" @click.stop="resumePlayback">{{ t('video.resumePlayback') }}</el-button>
+                    <el-button @click.stop="playFromStart">{{ t('video.playFromStart') }}</el-button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="player-controls" v-show="isPlaying || showControls">
+                <div class="progress-bar" @click="seekProgress">
+                  <div class="progress-buffered" :style="{ width: bufferedPercent + '%' }"></div>
                   <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
                   <div class="progress-dot" :style="{ left: progressPercent + '%' }"></div>
                 </div>
                 <div class="control-row">
                   <div class="control-left">
-                    <el-icon class="control-btn" @click.stop="togglePlay"><VideoPlay /></el-icon>
+                    <el-icon class="control-btn" @click.stop="togglePlay">
+                      <VideoPlay v-if="!isPlaying" />
+                      <VideoPause v-else />
+                    </el-icon>
                     <span class="time-text">{{ currentTimeText }} / {{ totalTimeText }}</span>
                   </div>
                   <div class="control-right">
-                    <el-icon class="control-btn"><DataBoard /></el-icon>
+                    <div class="control-btn-group">
+                      <el-dropdown trigger="click" @command="handleSpeedChange">
+                        <span class="control-btn speed-btn">
+                          {{ playbackSpeed }}x
+                        </span>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item
+                              v-for="speed in speedOptions"
+                              :key="speed"
+                              :command="speed"
+                              :class="{ active: playbackSpeed === speed }"
+                            >
+                              {{ speed }}x
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
+
+                    <div class="control-btn-group">
+                      <el-dropdown trigger="click" @command="handleQualityChange">
+                        <span class="control-btn quality-btn">
+                          {{ currentQualityLabel }}
+                        </span>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item
+                              v-for="q in qualityOptions"
+                              :key="q.key"
+                              :command="q.key"
+                              :class="{ active: currentQuality === q.key }"
+                            >
+                              {{ t(`video.quality${q.key}`) }}
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
+
+                    <el-icon class="control-btn" @click.stop="toggleFullscreen">
+                      <FullScreen v-if="!isFullscreen" />
+                      <Aim v-else />
+                    </el-icon>
                   </div>
                 </div>
               </div>
@@ -180,15 +244,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  ArrowLeft, VideoPlay, View, Star, StarFilled,
-  Share, UserFilled, DataBoard
+  ArrowLeft, VideoPlay, VideoPause, View, Star, StarFilled,
+  Share, UserFilled, FullScreen, Aim
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getVideoDetail, getRelatedVideoList } from '../../api/video'
+import { videoQualities } from '../../mock/videoData'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -203,16 +268,36 @@ const isLiked = ref(false)
 const isCollected = ref(false)
 const currentTime = ref(0)
 const totalTime = ref(100)
+const showControls = ref(false)
+const isFullscreen = ref(false)
+const playbackSpeed = ref(1)
+const currentQuality = ref('720p')
+const showResumeDialog = ref(false)
+const savedProgress = ref(0)
 
+const playerContainerRef = ref(null)
 let playTimer = null
+let saveProgressTimer = null
+
+const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2]
+const qualityOptions = videoQualities
 
 const progressPercent = computed(() => {
   if (totalTime.value === 0) return 0
   return (currentTime.value / totalTime.value) * 100
 })
 
+const bufferedPercent = computed(() => {
+  return Math.min(progressPercent.value + 10, 100)
+})
+
 const currentTimeText = computed(() => formatTime(currentTime.value))
 const totalTimeText = computed(() => formatTime(totalTime.value))
+
+const currentQualityLabel = computed(() => {
+  const q = qualityOptions.find(item => item.key === currentQuality.value)
+  return q ? q.resolution : '720P'
+})
 
 const difficultyType = computed(() => {
   const map = {
@@ -223,6 +308,62 @@ const difficultyType = computed(() => {
   return map[videoDetail.value?.difficulty] || 'info'
 })
 
+const STORAGE_KEY_PREFIX = 'video_progress_'
+
+const getStorageKey = () => {
+  return STORAGE_KEY_PREFIX + (route.params.id || 'default')
+}
+
+const loadSavedProgress = () => {
+  try {
+    const saved = localStorage.getItem(getStorageKey())
+    if (saved) {
+      const data = JSON.parse(saved)
+      savedProgress.value = data.currentTime || 0
+      if (data.quality) {
+        currentQuality.value = data.quality
+      }
+      if (data.speed) {
+        playbackSpeed.value = data.speed
+      }
+      return savedProgress.value > 0 && savedProgress.value < totalTime.value - 5
+    }
+  } catch (e) {
+    console.warn('Failed to load video progress:', e)
+  }
+  return false
+}
+
+const saveProgress = () => {
+  try {
+    const data = {
+      currentTime: currentTime.value,
+      quality: currentQuality.value,
+      speed: playbackSpeed.value,
+      updatedAt: Date.now()
+    }
+    localStorage.setItem(getStorageKey(), JSON.stringify(data))
+  } catch (e) {
+    console.warn('Failed to save video progress:', e)
+  }
+}
+
+const startProgressSaver = () => {
+  stopProgressSaver()
+  saveProgressTimer = setInterval(() => {
+    if (isPlaying.value) {
+      saveProgress()
+    }
+  }, 5000)
+}
+
+const stopProgressSaver = () => {
+  if (saveProgressTimer) {
+    clearInterval(saveProgressTimer)
+    saveProgressTimer = null
+  }
+}
+
 const loadVideoDetail = async () => {
   loading.value = true
   try {
@@ -231,6 +372,11 @@ const loadVideoDetail = async () => {
     videoDetail.value = res.data
     if (videoDetail.value?.outline?.length > 0) {
       totalTime.value = videoDetail.value.durationSeconds || 3600
+    }
+    await nextTick()
+    const hasSaved = loadSavedProgress()
+    if (hasSaved) {
+      showResumeDialog.value = true
     }
   } finally {
     loading.value = false
@@ -244,23 +390,47 @@ const loadRelatedVideos = async () => {
 }
 
 const togglePlay = () => {
+  if (showResumeDialog.value) {
+    showResumeDialog.value = false
+  }
   isPlaying.value = !isPlaying.value
   if (isPlaying.value) {
     startPlayback()
+    startProgressSaver()
   } else {
     stopPlayback()
+    saveProgress()
   }
 }
 
+const resumePlayback = () => {
+  showResumeDialog.value = false
+  currentTime.value = savedProgress.value
+  isPlaying.value = true
+  startPlayback()
+  startProgressSaver()
+}
+
+const playFromStart = () => {
+  showResumeDialog.value = false
+  currentTime.value = 0
+  isPlaying.value = true
+  startPlayback()
+  startProgressSaver()
+}
+
 const startPlayback = () => {
+  stopPlayback()
+  const interval = 1000 / playbackSpeed.value
   playTimer = setInterval(() => {
     if (currentTime.value < totalTime.value) {
       currentTime.value += 1
     } else {
       stopPlayback()
       isPlaying.value = false
+      saveProgress()
     }
-  }, 1000)
+  }, interval)
 }
 
 const stopPlayback = () => {
@@ -270,12 +440,65 @@ const stopPlayback = () => {
   }
 }
 
+const handleSpeedChange = (speed) => {
+  playbackSpeed.value = speed
+  if (isPlaying.value) {
+    startPlayback()
+  }
+  saveProgress()
+  ElMessage.success(`${speed}x`)
+}
+
+const handleQualityChange = (quality) => {
+  currentQuality.value = quality
+  saveProgress()
+  ElMessage.success(t(`video.quality${quality}`))
+}
+
+const toggleFullscreen = () => {
+  if (!playerContainerRef.value) return
+
+  if (!isFullscreen.value) {
+    if (playerContainerRef.value.requestFullscreen) {
+      playerContainerRef.value.requestFullscreen()
+    } else if (playerContainerRef.value.webkitRequestFullscreen) {
+      playerContainerRef.value.webkitRequestFullscreen()
+    } else if (playerContainerRef.value.msRequestFullscreen) {
+      playerContainerRef.value.msRequestFullscreen()
+    }
+    isFullscreen.value = true
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen()
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen()
+    }
+    isFullscreen.value = false
+  }
+}
+
+const handleFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement || 
+    !!document.webkitFullscreenElement || 
+    !!document.msFullscreenElement
+}
+
+const seekProgress = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect()
+  const percent = (e.clientX - rect.left) / rect.width
+  currentTime.value = Math.floor(percent * totalTime.value)
+  saveProgress()
+}
+
 const selectChapter = (chapter) => {
   currentChapter.value = chapter
   currentTime.value = 0
   if (!isPlaying.value) {
     isPlaying.value = true
     startPlayback()
+    startProgressSaver()
   }
 }
 
@@ -309,9 +532,13 @@ const goBack = () => {
 
 const goToVideo = (id) => {
   stopPlayback()
+  stopProgressSaver()
+  saveProgress()
   currentTime.value = 0
   isPlaying.value = false
   currentChapter.value = 1
+  showResumeDialog.value = false
+  savedProgress.value = 0
   router.push(`/video/${id}`)
   loadVideoDetail()
   loadRelatedVideos()
@@ -337,10 +564,18 @@ const formatTime = (seconds) => {
 onMounted(() => {
   loadVideoDetail()
   loadRelatedVideos()
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+  document.addEventListener('msfullscreenchange', handleFullscreenChange)
 })
 
 onUnmounted(() => {
   stopPlayback()
+  stopProgressSaver()
+  saveProgress()
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+  document.removeEventListener('msfullscreenchange', handleFullscreenChange)
 })
 </script>
 
@@ -409,6 +644,11 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: filter 0.3s;
+}
+
+.poster-img.blurred {
+  filter: brightness(0.7);
 }
 
 .player-overlay {
@@ -440,6 +680,56 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+.resume-dialog {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+
+.resume-content {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.resume-icon {
+  color: var(--color-primary);
+}
+
+.resume-text {
+  text-align: center;
+}
+
+.resume-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.resume-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.resume-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .player-controls {
   position: absolute;
   bottom: 0;
@@ -448,6 +738,7 @@ onUnmounted(() => {
   padding: 12px 16px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
   color: #fff;
+  z-index: 5;
 }
 
 .progress-bar {
@@ -459,7 +750,19 @@ onUnmounted(() => {
   margin-bottom: 10px;
 }
 
+.progress-buffered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+}
+
 .progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
   background: var(--color-primary);
   border-radius: 2px;
@@ -488,14 +791,40 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.control-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .control-btn {
   font-size: 20px;
   cursor: pointer;
   transition: color 0.2s;
+  color: #fff;
 }
 
 .control-btn:hover {
   color: var(--color-primary);
+}
+
+.control-btn-group {
+  display: flex;
+  align-items: center;
+}
+
+.speed-btn,
+.quality-btn {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.speed-btn:hover,
+.quality-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .time-text {
@@ -828,6 +1157,31 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
+:deep(.el-dropdown-menu__item.active) {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.video-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-player:fullscreen .player-wrapper {
+  padding-top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.video-player:fullscreen .poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 @media screen and (max-width: 1200px) {
   .detail-content {
     flex-direction: column;
@@ -915,6 +1269,15 @@ onUnmounted(() => {
   .time-text {
     font-size: 12px;
   }
+
+  .control-right {
+    gap: 12px;
+  }
+
+  .speed-btn,
+  .quality-btn {
+    font-size: 12px;
+  }
 }
 
 @media screen and (max-width: 480px) {
@@ -931,6 +1294,20 @@ onUnmounted(() => {
 
   .chapter-title {
     font-size: 13px;
+  }
+
+  .resume-content {
+    padding: 20px;
+    max-width: 300px;
+  }
+
+  .resume-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .resume-actions .el-button {
+    width: 100%;
   }
 }
 </style>

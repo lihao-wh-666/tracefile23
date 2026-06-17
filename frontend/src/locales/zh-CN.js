@@ -160,6 +160,18 @@ export default {
     likeSuccess: '点赞成功',
     cancelLike: '已取消点赞',
     collectSuccess: '收藏成功',
-    cancelCollect: '已取消收藏'
+    cancelCollect: '已取消收藏',
+    playbackSpeed: '播放速度',
+    quality: '清晰度',
+    quality360p: '标清 360P',
+    quality720p: '高清 720P',
+    quality1080p: '超清 1080P',
+    quality4k: '蓝光 4K',
+    fullscreen: '全屏',
+    exitFullscreen: '退出全屏',
+    resumePlayback: '继续播放',
+    resumeFrom: '从 {time} 继续播放',
+    playFromStart: '从头播放',
+    playbackMemory: '播放记忆'
   }
 }

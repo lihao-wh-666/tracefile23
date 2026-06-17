@@ -160,6 +160,18 @@ export default {
     likeSuccess: 'Liked',
     cancelLike: 'Unliked',
     collectSuccess: 'Collected',
-    cancelCollect: 'Uncollected'
+    cancelCollect: 'Uncollected',
+    playbackSpeed: 'Playback Speed',
+    quality: 'Quality',
+    quality360p: 'SD 360P',
+    quality720p: 'HD 720P',
+    quality1080p: 'FHD 1080P',
+    quality4k: '4K UHD',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit Fullscreen',
+    resumePlayback: 'Resume Playback',
+    resumeFrom: 'Resume from {time}',
+    playFromStart: 'Play from Start',
+    playbackMemory: 'Playback Memory'
   }
 }
