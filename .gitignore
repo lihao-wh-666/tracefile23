@@ -47,3 +47,5 @@ logs/
 # Environment
 .env
 .env.*
+
+.m2/*

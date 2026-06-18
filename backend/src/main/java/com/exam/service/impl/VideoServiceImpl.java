@@ -158,12 +158,21 @@ public class VideoServiceImpl implements VideoService {
             vo.setPublishDate(entity.getCreateTime().format(DATE_FORMATTER));
         }
 
-        String statusName = switch (entity.getStatus()) {
-            case 0 -> "草稿";
-            case 1 -> "已发布";
-            case 2 -> "已下架";
-            default -> "未知";
-        };
+        String statusName;
+        switch (entity.getStatus()) {
+            case 0:
+                statusName = "草稿";
+                break;
+            case 1:
+                statusName = "已发布";
+                break;
+            case 2:
+                statusName = "已下架";
+                break;
+            default:
+                statusName = "未知";
+                break;
+        }
         vo.setStatusName(statusName);
 
         if (vo.getCategoryName() == null && entity.getCategoryId() != null) {

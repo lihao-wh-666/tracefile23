@@ -84,7 +84,8 @@ public class VideoController {
         video.setStatus(videoDTO.getStatus());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof com.exam.entity.User user) {
+        if (authentication != null && authentication.getPrincipal() instanceof com.exam.entity.User) {
+            com.exam.entity.User user = (com.exam.entity.User) authentication.getPrincipal();
             video.setCreateBy(user.getId());
         }
 

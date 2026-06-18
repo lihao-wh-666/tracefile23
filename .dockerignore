@@ -2,6 +2,8 @@
 **/.gitignore
 **/node_modules
 **/target
+!backend/target
+!backend/target/*.jar
 **/dist
 **/.idea
 **/.vscode
