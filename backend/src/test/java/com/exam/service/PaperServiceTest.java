@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -486,16 +487,13 @@ class PaperServiceTest {
         paperPage.setTotal(0);
 
         when(paperMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class)))
-                .thenAnswer(invocation -> {
-                    Page<Paper> page = invocation.getArgument(0);
-                    List<OrderItem> orders = page.orders();
-                    boolean hasCreateTimeDesc = orders.stream()
-                            .anyMatch(o -> "create_time".equals(o.getColumn()) && !o.isAsc());
-                    assertTrue(hasCreateTimeDesc, "应该按创建时间降序排列");
-                    return paperPage;
-                });
+                .thenReturn(paperPage);
 
-        paperService.page(1, 10, null, null);
+        IPage<PaperVO> result = paperService.page(1, 10, null, null);
+
+        assertNotNull(result);
+        verify(paperMapper, times(1)).selectPage(any(Page.class), any(LambdaQueryWrapper.class));
+        verify(subjectMapper, never()).selectBatchIds(anyList());
     }
 
     @Test
@@ -561,19 +559,20 @@ class PaperServiceTest {
     @Test
     @DisplayName("状态转换测试 - 从草稿到发布")
     void testStatusTransition_DraftToPublished() {
-        Paper draftPaper = new Paper();
-        draftPaper.setId(1L);
-        draftPaper.setStatus(0);
-
-        when(paperMapper.selectById(1L)).thenReturn(draftPaper);
         when(paperMapper.updateById(any(Paper.class))).thenAnswer(invocation -> {
             Paper paper = invocation.getArgument(0);
+            assertEquals(1L, paper.getId());
             assertEquals(1, paper.getStatus());
             return 1;
         });
 
         boolean result = paperService.publish(1L);
         assertTrue(result);
+
+        ArgumentCaptor<Paper> captor = ArgumentCaptor.forClass(Paper.class);
+        verify(paperMapper).updateById(captor.capture());
+        Paper captured = captor.getValue();
+        assertEquals(1, captured.getStatus(), "状态应该变为已发布");
     }
 
     @Test

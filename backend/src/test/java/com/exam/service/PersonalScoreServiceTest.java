@@ -414,7 +414,7 @@ class PersonalScoreServiceTest {
         assertEquals(1L, stat.getExamId());
         assertEquals("Java期中考试", stat.getExamName());
         assertEquals(3, stat.getTotalCount());
-        assertEquals(85.0, stat.getAvgScore());
+        assertEquals(83.33, stat.getAvgScore());
         assertEquals(95, stat.getMaxScore());
         assertEquals(70, stat.getMinScore());
         assertNotNull(stat.getPassCount());

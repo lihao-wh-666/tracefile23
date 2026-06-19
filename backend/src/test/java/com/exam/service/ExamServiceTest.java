@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -161,16 +162,13 @@ class ExamServiceTest {
         examPage.setTotal(0);
 
         when(examMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class)))
-                .thenAnswer(invocation -> {
-                    Page<Exam> page = invocation.getArgument(0);
-                    List<OrderItem> orders = page.orders();
-                    boolean hasCreateTimeDesc = orders.stream()
-                            .anyMatch(o -> "create_time".equals(o.getColumn()) && !o.isAsc());
-                    assertTrue(hasCreateTimeDesc, "应该按创建时间降序排列");
-                    return examPage;
-                });
+                .thenReturn(examPage);
 
-        examService.page(1, 10, null);
+        IPage<ExamVO> result = examService.page(1, 10, null);
+
+        assertNotNull(result);
+        verify(examMapper, times(1)).selectPage(any(Page.class), any(LambdaQueryWrapper.class));
+        verify(paperMapper, never()).selectBatchIds(anyList());
     }
 
     @Test

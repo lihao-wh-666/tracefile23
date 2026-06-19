@@ -220,7 +220,9 @@ class ExamTakeServiceTest {
 
         when(examMapper.selectById(1L)).thenReturn(testExam);
         when(examRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testExamRecord);
-        when(paperMapper.selectById(1L)).thenReturn(testPaper);
+        when(examMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testExam));
+        when(paperMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testPaper));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(new ArrayList<>());
 
         ExamRecordVO result = examRecordService.startExam(1L, 1L);
 
@@ -236,7 +238,9 @@ class ExamTakeServiceTest {
 
         when(examMapper.selectById(1L)).thenReturn(testExam);
         when(examRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testExamRecord);
-        when(paperMapper.selectById(1L)).thenReturn(testPaper);
+        when(examMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testExam));
+        when(paperMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testPaper));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(new ArrayList<>());
 
         ExamRecordVO result = examRecordService.startExam(1L, 1L);
 
@@ -568,7 +572,6 @@ class ExamTakeServiceTest {
         when(examMapper.selectById(1L)).thenReturn(testExam);
         when(examAnswerMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(testExamAnswers);
         when(questionMapper.selectBatchIds(anyList())).thenReturn(testQuestions);
-        when(examAnswerMapper.updateById(any(ExamAnswer.class))).thenReturn(1);
 
         final int[] essayScore = {0};
         final int[] essayCorrect = {0};
@@ -872,9 +875,9 @@ class ExamTakeServiceTest {
         testExamRecord.setStatus(Constants.RECORD_EXAMING);
 
         when(examRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testExamRecord);
-        when(examMapper.selectById(1L)).thenReturn(testExam);
-        when(paperMapper.selectById(1L)).thenReturn(testPaper);
-        when(userMapper.selectById(1L)).thenReturn(new User());
+        when(examMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testExam));
+        when(paperMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testPaper));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(new ArrayList<>());
 
         ExamRecordVO result = examRecordService.getCurrentExam(1L);
 
